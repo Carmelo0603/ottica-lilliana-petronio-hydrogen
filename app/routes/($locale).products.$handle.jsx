@@ -1,243 +1,229 @@
 import {useLoaderData} from 'react-router';
-import {
-  getSelectedProductOptions,
-  Analytics,
-  useOptimisticVariant,
-  getProductOptions,
-  getAdjacentAndFirstAvailableVariants,
-  useSelectedOptionInUrlParam,
-} from '@shopify/hydrogen';
-import {ProductPrice} from '~/components/ProductPrice';
-import {ProductImage} from '~/components/ProductImage';
-import {ProductForm} from '~/components/ProductForm';
-import {redirectIfHandleIsLocalized} from '~/lib/redirect';
+import {useState} from 'react';
+import {motion} from 'framer-motion';
+import {Image, Money, CartForm} from '@shopify/hydrogen';
+import {Plus} from 'lucide-react';
+import {Link} from 'react-router';
 
-/**
- * @type {Route.MetaFunction}
- */
-export const meta = ({data}) => {
-  return [
-    {title: `Hydrogen | ${data?.product.title ?? ''}`},
-    {
-      rel: 'canonical',
-      href: `/products/${data?.product.handle}`,
-    },
-  ];
-};
-
-/**
- * @param {Route.LoaderArgs} args
- */
-export async function loader(args) {
-  // Start fetching non-critical data without blocking time to first byte
-  const deferredData = loadDeferredData(args);
-
-  // Await the critical data required to render initial state of the page
-  const criticalData = await loadCriticalData(args);
-
-  return {...deferredData, ...criticalData};
-}
-
-/**
- * Load data necessary for rendering content above the fold. This is the critical data
- * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
- * @param {Route.LoaderArgs}
- */
-async function loadCriticalData({context, params, request}) {
+// ------------------------------------------------------------------
+// LOADER: Peschiamo i dati dal server di Shopify
+// ------------------------------------------------------------------
+export async function loader({params, context}) {
   const {handle} = params;
   const {storefront} = context;
 
-  if (!handle) {
-    throw new Error('Expected product handle to be defined');
-  }
+  const {product} = await storefront.query(PRODUCT_QUERY, {
+    variables: {handle},
+  });
 
-  const [{product}] = await Promise.all([
-    storefront.query(PRODUCT_QUERY, {
-      variables: {handle, selectedOptions: getSelectedProductOptions(request)},
-    }),
-    // Add other queries here, so that they are loaded in parallel
-  ]);
-
-  if (!product?.id) {
+  if (!product) {
     throw new Response(null, {status: 404});
   }
 
-  // The API handle might be localized, so redirect to the localized handle
-  redirectIfHandleIsLocalized(request, {handle, data: product});
-
-  return {
-    product,
-  };
+  return {product};
 }
 
-/**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- * @param {Route.LoaderArgs}
- */
-function loadDeferredData({context, params}) {
-  // Put any API calls that is not critical to be available on first page render
-  // For example: product reviews, product recommendations, social feeds.
-
-  return {};
-}
-
+// ------------------------------------------------------------------
+// COMPONENTE PRINCIPALE
+// ------------------------------------------------------------------
 export default function Product() {
-  /** @type {LoaderReturnData} */
   const {product} = useLoaderData();
+  const [activeImage, setActiveImage] = useState(0);
 
-  // Optimistically selects a variant with given available variant information
-  const selectedVariant = useOptimisticVariant(
-    product.selectedOrFirstAvailableVariant,
-    getAdjacentAndFirstAvailableVariants(product),
-  );
-
-  // Sets the search param to the selected variant without navigation
-  // only when no search params are set in the url
-  useSelectedOptionInUrlParam(selectedVariant.selectedOptions);
-
-  // Get the product options array
-  const productOptions = getProductOptions({
-    ...product,
-    selectedOrFirstAvailableVariant: selectedVariant,
-  });
-
-  const {title, descriptionHtml} = product;
+  const selectedVariant = product.variants.nodes[0];
+  const images = product.images.nodes;
 
   return (
-    <div className="product">
-      <ProductImage image={selectedVariant?.image} />
-      <div className="product-main">
-        <h1>{title}</h1>
-        <ProductPrice
-          price={selectedVariant?.price}
-          compareAtPrice={selectedVariant?.compareAtPrice}
-        />
-        <br />
-        <ProductForm
-          productOptions={productOptions}
-          selectedVariant={selectedVariant}
-        />
-        <br />
-        <br />
-        <p>
-          <strong>Description</strong>
-        </p>
-        <br />
-        <div dangerouslySetInnerHTML={{__html: descriptionHtml}} />
-        <br />
+    <section className="min-h-screen bg-brand-light pt-32 md:pt-48 pb-24">
+      {/* IL TASTO ORA È DENTRO IL CONTENITORE PRINCIPALE, SUBITO SOPRA L'IMMAGINE */}
+      <div className="mt-20 z-50">
+        <Link
+          to="/collections/all"
+          className="inline-flex items-center gap-2 font-sans text-[10px] md:text-xs uppercase tracking-[0.2em] text-brand-dark/50 hover:text-brand-accent transition-colors group"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="group-hover:-translate-x-1 transition-transform duration-300"
+          >
+            <path d="m12 19-7-7 7-7" />
+            <path d="M19 12H5" />
+          </svg>
+          <span className="border-b border-transparent group-hover:border-brand-accent transition-colors pb-0.5">
+            Torna al Catalogo
+          </span>
+        </Link>
       </div>
-      <Analytics.ProductView
-        data={{
-          products: [
-            {
-              id: product.id,
-              title: product.title,
-              price: selectedVariant?.price.amount || '0',
-              vendor: product.vendor,
-              variantId: selectedVariant?.id || '',
-              variantTitle: selectedVariant?.title || '',
-              quantity: 1,
-            },
-          ],
-        }}
-      />
-    </div>
+
+      <div className="flex flex-col lg:flex-row gap-12 lg:gap-24">
+        {/* Gallery */}
+        <div className="w-full lg:w-3/5 space-y-6">
+          <motion.div
+            initial={{opacity: 0, y: 20}}
+            animate={{opacity: 1, y: 0}}
+            transition={{duration: 0.8}}
+            className="w-full aspect-square md:aspect-[4/3] bg-brand-gray overflow-hidden"
+          >
+            {images[activeImage] && (
+              <Image
+                data={images[activeImage]}
+                className="w-full h-full object-cover"
+                sizes="(min-width: 45em) 50vw, 100vw"
+              />
+            )}
+          </motion.div>
+
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {images.map((img, idx) => (
+              <button
+                key={img.id}
+                onClick={() => setActiveImage(idx)}
+                className={`w-24 h-24 flex-shrink-0 bg-brand-gray overflow-hidden border-2 transition-colors ${activeImage === idx ? 'border-brand-accent' : 'border-transparent'}`}
+              >
+                <Image
+                  data={img}
+                  className="w-full h-full object-cover"
+                  sizes="100px"
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Info */}
+        <div className="w-full lg:w-2/5">
+          <div className="sticky top-32">
+            <motion.div
+              initial={{opacity: 0, x: 20}}
+              animate={{opacity: 1, x: 0}}
+              transition={{duration: 0.8, delay: 0.2}}
+            >
+              <div className="flex flex-col mb-6">
+                <span className="text-brand-dark/40 font-sans text-[10px] uppercase tracking-[0.3em] mb-2">
+                  {product.vendor}
+                </span>
+                <div className="flex justify-between items-start">
+                  <h1 className="text-4xl md:text-5xl font-serif text-brand-dark uppercase tracking-tight leading-none">
+                    {product.title}
+                  </h1>
+                  <Money
+                    data={selectedVariant.price}
+                    className="text-2xl font-serif italic text-brand-dark"
+                  />
+                </div>
+              </div>
+
+              {/* Badge Dinamici basati sui TAGS di Shopify */}
+              <div className="flex flex-wrap gap-3 mb-8">
+                {product.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="font-sans text-[9px] uppercase tracking-widest text-brand-dark/60 bg-brand-gray px-3 py-1 border border-brand-dark/5"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+
+              <div
+                className="font-sans text-brand-dark/80 uppercase tracking-widest leading-relaxed text-sm mb-12"
+                dangerouslySetInnerHTML={{__html: product.descriptionHtml}}
+              />
+
+              {/* Tasto Acquista (Reale Shopify) */}
+              <AddToCartButton
+                variantId={selectedVariant.id}
+                available={selectedVariant.availableForSale}
+              />
+
+              {/* Specifiche (Prese dai Tag o dai Metafield se implementati) */}
+              <div className="space-y-6 border-t border-brand-gray pt-8">
+                <h3 className="font-sans text-xs uppercase tracking-widest font-bold text-brand-dark">
+                  Protocollo Tecnico
+                </h3>
+                <ul className="space-y-3">
+                  {product.tags
+                    .filter((t) => t.includes(':'))
+                    .map((spec, i) => (
+                      <li
+                        key={i}
+                        className="flex items-center gap-3 font-sans text-sm uppercase tracking-wider text-brand-dark/70"
+                      >
+                        <div className="w-1 h-1 bg-brand-accent rounded-full" />
+                        {spec.replace(':', ': ')}
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
-const PRODUCT_VARIANT_FRAGMENT = `#graphql
-  fragment ProductVariant on ProductVariant {
-    availableForSale
-    compareAtPrice {
-      amount
-      currencyCode
-    }
-    id
-    image {
-      __typename
-      id
-      url
-      altText
-      width
-      height
-    }
-    price {
-      amount
-      currencyCode
-    }
-    product {
-      title
-      handle
-    }
-    selectedOptions {
-      name
-      value
-    }
-    sku
-    title
-    unitPrice {
-      amount
-      currencyCode
-    }
-  }
-`;
+// Componente Bottone Carrello
+function AddToCartButton({variantId, available}) {
+  return (
+    <CartForm
+      route="/cart"
+      inputs={{lines: [{merchandiseId: variantId, quantity: 1}]}}
+      action={CartForm.ACTIONS.LinesAdd}
+    >
+      <button
+        type="submit"
+        disabled={!available}
+        className="w-full group bg-brand-dark text-brand-light flex items-center justify-between px-8 py-5 hover:bg-brand-accent hover:text-brand-dark disabled:bg-gray-300 disabled:text-gray-500 transition-colors duration-500 mb-12"
+      >
+        <span className="font-sans uppercase text-xs tracking-[0.2em] font-bold">
+          {available ? 'Aggiungi al Carrello' : 'Esaurito'}
+        </span>
+        <Plus
+          size={18}
+          className="group-hover:rotate-90 transition-transform duration-500"
+        />
+      </button>
+    </CartForm>
+  );
+}
 
-const PRODUCT_FRAGMENT = `#graphql
-  fragment Product on Product {
-    id
-    title
-    vendor
-    handle
-    descriptionHtml
-    description
-    encodedVariantExistence
-    encodedVariantAvailability
-    options {
-      name
-      optionValues {
-        name
-        firstSelectableVariant {
-          ...ProductVariant
+// QUERY GRAPHQL
+const PRODUCT_QUERY = `#graphql
+  query Product($handle: String!) {
+    product(handle: $handle) {
+      id
+      title
+      vendor
+      handle
+      descriptionHtml
+      tags
+      images(first: 5) {
+        nodes {
+          id
+          url
+          altText
+          width
+          height
         }
-        swatch {
-          color
-          image {
-            previewImage {
-              url
-            }
+      }
+      variants(first: 1) {
+        nodes {
+          id
+          availableForSale
+          price {
+            amount
+            currencyCode
           }
         }
       }
     }
-    selectedOrFirstAvailableVariant(selectedOptions: $selectedOptions, ignoreUnknownOptions: true, caseInsensitiveMatch: true) {
-      ...ProductVariant
-    }
-    adjacentVariants (selectedOptions: $selectedOptions) {
-      ...ProductVariant
-    }
-    seo {
-      description
-      title
-    }
   }
-  ${PRODUCT_VARIANT_FRAGMENT}
 `;
-
-const PRODUCT_QUERY = `#graphql
-  query Product(
-    $country: CountryCode
-    $handle: String!
-    $language: LanguageCode
-    $selectedOptions: [SelectedOptionInput!]!
-  ) @inContext(country: $country, language: $language) {
-    product(handle: $handle) {
-      ...Product
-    }
-  }
-  ${PRODUCT_FRAGMENT}
-`;
-
-/** @typedef {import('./+types/products.$handle').Route} Route */
-/** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof loader>} LoaderReturnData */

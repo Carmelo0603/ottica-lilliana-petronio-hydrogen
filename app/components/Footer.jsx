@@ -1,22 +1,98 @@
 import {Suspense} from 'react';
 import {Await, NavLink} from 'react-router';
 
-/**
- * @param {FooterProps}
- */
 export function Footer({footer: footerPromise, header, publicStoreDomain}) {
   return (
-    <Suspense>
+    <Suspense
+      fallback={<footer className="w-full bg-brand-dark py-24"></footer>}
+    >
       <Await resolve={footerPromise}>
         {(footer) => (
-          <footer className="footer">
-            {footer?.menu && header.shop.primaryDomain?.url && (
-              <FooterMenu
-                menu={footer.menu}
-                primaryDomainUrl={header.shop.primaryDomain.url}
-                publicStoreDomain={publicStoreDomain}
-              />
-            )}
+          <footer className="w-full bg-brand-dark border-t border-brand-light/10 pt-24 pb-12 px-6 md:px-12 relative z-10 text-brand-light">
+            <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-24 mb-24">
+              {/* Colonna 1: Brand */}
+              <div className="md:col-span-2 space-y-8">
+                <NavLink
+                  to="/"
+                  prefetch="intent"
+                  className="block text-brand-light font-serif text-3xl md:text-4xl tracking-tight uppercase font-medium"
+                >
+                  {header?.shop?.name || 'Ottica Liliana Petronio'}
+                </NavLink>
+                <p className="font-sans text-brand-light/60 text-sm max-w-sm uppercase leading-relaxed font-medium">
+                  Sperimenta la visione definitiva. Design accademico, anima
+                  siciliana.
+                </p>
+              </div>
+
+              {/* Colonna 2: Navigazione Statica (Colore bianco/60 FORZATO) */}
+              <div className="space-y-8">
+                <h4 className="text-brand-light font-sans text-xs tracking-[0.3em] uppercase font-bold">
+                  Esplora
+                </h4>
+                <ul className="space-y-4">
+                  <li>
+                    <NavLink
+                      to="/collections/all"
+                      prefetch="intent"
+                      className="block text-brand-light/60 hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
+                    >
+                      Collezioni
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink
+                      to="/pages/philosophy"
+                      prefetch="intent"
+                      className="block text-brand-light/60 hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
+                    >
+                      Filosofia
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink
+                      to="/pages/studio"
+                      prefetch="intent"
+                      className="block text-brand-light/60 hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
+                    >
+                      Studio
+                    </NavLink>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Colonna 3: Navigazione Dinamica Shopify */}
+              <div className="space-y-8">
+                <h4 className="text-brand-light font-sans text-xs tracking-[0.3em] uppercase font-bold">
+                  Supporto
+                </h4>
+                {footer?.menu && header?.shop?.primaryDomain?.url && (
+                  <FooterMenu
+                    menu={footer.menu}
+                    primaryDomainUrl={header.shop.primaryDomain.url}
+                    publicStoreDomain={publicStoreDomain}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Bar */}
+            <div className="max-w-[1400px] mx-auto border-t border-brand-light/10 pt-8 flex justify-between items-center">
+              <p className="font-sans text-brand-light/40 text-[10px] uppercase tracking-[0.2em]">
+                © {new Date().getFullYear()}{' '}
+                {header?.shop?.name || 'Ottica Liliana Petronio'}.
+              </p>
+              <div className="flex gap-6">
+                <InstagramIcon
+                  size={18}
+                  className="text-brand-light/60 hover:text-brand-accent cursor-pointer transition-colors"
+                />
+                <MailIcon
+                  size={18}
+                  className="text-brand-light/60 hover:text-brand-accent cursor-pointer transition-colors"
+                />
+              </div>
+            </div>
           </footer>
         )}
       </Await>
@@ -24,107 +100,103 @@ export function Footer({footer: footerPromise, header, publicStoreDomain}) {
   );
 }
 
-/**
- * @param {{
- *   menu: FooterQuery['menu'];
- *   primaryDomainUrl: FooterProps['header']['shop']['primaryDomain']['url'];
- *   publicStoreDomain: string;
- * }}
- */
+// ==========================================
+// Componente Figlio: Il Menu Dinamico
+// ==========================================
 function FooterMenu({menu, primaryDomainUrl, publicStoreDomain}) {
   return (
-    <nav className="footer-menu" role="navigation">
+    <ul className="space-y-4">
       {(menu || FALLBACK_FOOTER_MENU).items.map((item) => {
         if (!item.url) return null;
-        // if the url is internal, we strip the domain
+
         const url =
           item.url.includes('myshopify.com') ||
           item.url.includes(publicStoreDomain) ||
           item.url.includes(primaryDomainUrl)
             ? new URL(item.url).pathname
             : item.url;
+
         const isExternal = !url.startsWith('/');
-        return isExternal ? (
-          <a href={url} key={item.id} rel="noopener noreferrer" target="_blank">
-            {item.title}
-          </a>
-        ) : (
-          <NavLink
-            end
-            key={item.id}
-            prefetch="intent"
-            style={activeLinkStyle}
-            to={url}
-          >
-            {item.title}
-          </NavLink>
+
+        return (
+          <li key={item.id}>
+            {isExternal ? (
+              <a
+                href={url}
+                rel="noopener noreferrer"
+                target="_blank"
+                className="block text-brand-light/60 hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
+              >
+                {item.title}
+              </a>
+            ) : (
+              <NavLink
+                end
+                prefetch="intent"
+                to={url}
+                className={({isActive}) =>
+                  isActive
+                    ? 'block text-brand-accent font-bold text-sm uppercase tracking-widest'
+                    : 'block text-brand-light/60 hover:text-brand-accent transition-colors text-sm uppercase tracking-widest'
+                }
+              >
+                {item.title}
+              </NavLink>
+            )}
+          </li>
         );
       })}
-    </nav>
+    </ul>
   );
 }
 
+// Fallback di sicurezza
 const FALLBACK_FOOTER_MENU = {
   id: 'gid://shopify/Menu/199655620664',
   items: [
-    {
-      id: 'gid://shopify/MenuItem/461633060920',
-      resourceId: 'gid://shopify/ShopPolicy/23358046264',
-      tags: [],
-      title: 'Privacy Policy',
-      type: 'SHOP_POLICY',
-      url: '/policies/privacy-policy',
-      items: [],
-    },
-    {
-      id: 'gid://shopify/MenuItem/461633093688',
-      resourceId: 'gid://shopify/ShopPolicy/23358013496',
-      tags: [],
-      title: 'Refund Policy',
-      type: 'SHOP_POLICY',
-      url: '/policies/refund-policy',
-      items: [],
-    },
-    {
-      id: 'gid://shopify/MenuItem/461633126456',
-      resourceId: 'gid://shopify/ShopPolicy/23358111800',
-      tags: [],
-      title: 'Shipping Policy',
-      type: 'SHOP_POLICY',
-      url: '/policies/shipping-policy',
-      items: [],
-    },
-    {
-      id: 'gid://shopify/MenuItem/461633159224',
-      resourceId: 'gid://shopify/ShopPolicy/23358079032',
-      tags: [],
-      title: 'Terms of Service',
-      type: 'SHOP_POLICY',
-      url: '/policies/terms-of-service',
-      items: [],
-    },
+    {id: '1', title: 'Privacy Policy', url: '/policies/privacy-policy'},
+    {id: '2', title: 'Refund Policy', url: '/policies/refund-policy'},
+    {id: '3', title: 'Shipping Policy', url: '/policies/shipping-policy'},
+    {id: '4', title: 'Terms of Service', url: '/policies/terms-of-service'},
   ],
 };
 
-/**
- * @param {{
- *   isActive: boolean;
- *   isPending: boolean;
- * }}
- */
-function activeLinkStyle({isActive, isPending}) {
-  return {
-    fontWeight: isActive ? 'bold' : undefined,
-    color: isPending ? 'grey' : 'white',
-  };
-}
+// ==========================================
+// Icone Native (Bypass per errore Lucide)
+// ==========================================
+const InstagramIcon = ({className, size}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+  </svg>
+);
 
-/**
- * @typedef {Object} FooterProps
- * @property {Promise<FooterQuery|null>} footer
- * @property {HeaderQuery} header
- * @property {string} publicStoreDomain
- */
-
-/** @typedef {import('storefrontapi.generated').FooterQuery} FooterQuery */
-/** @typedef {import('storefrontapi.generated').HeaderQuery} HeaderQuery */
+const MailIcon = ({className, size}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <rect width="20" height="16" x="2" y="4" rx="2" />
+    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+  </svg>
+);

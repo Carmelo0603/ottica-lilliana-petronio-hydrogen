@@ -2,7 +2,11 @@ import {Await, useLoaderData, Link} from 'react-router';
 import {Suspense} from 'react';
 import {Image} from '@shopify/hydrogen';
 import {ProductItem} from '~/components/ProductItem';
-import {MockShopNotice} from '~/components/MockShopNotice';
+
+import {Hero} from '~/components/Hero';
+import {CatalogPreview} from '~/components/CatalogPreview';
+import {Storytelling} from '~/components/Storytelling';
+import {TrustBanner} from '~/components/TrustBanner';
 
 /**
  * @type {Route.MetaFunction}
@@ -62,13 +66,33 @@ function loadDeferredData({context}) {
 }
 
 export default function Homepage() {
-  /** @type {LoaderReturnData} */
   const data = useLoaderData();
+
   return (
     <div className="home">
-      {data.isShopLinked ? null : <MockShopNotice />}
-      <FeaturedCollection collection={data.featuredCollection} />
-      <RecommendedProducts products={data.recommendedProducts} />
+      {/* 1. Impatto iniziale (Statico) */}
+      <Hero />
+
+      {/* 2. La vetrina prodotti (Dinamica con dati Shopify) */}
+      <Suspense
+        fallback={
+          <div className="py-24 text-center font-serif italic uppercase tracking-widest opacity-30">
+            Caricamento catalogo...
+          </div>
+        }
+      >
+        <Await resolve={data.recommendedProducts}>
+          {(recommendedProducts) => (
+            <CatalogPreview products={recommendedProducts} />
+          )}
+        </Await>
+      </Suspense>
+
+      {/* 3. Il racconto del brand (Statico/Parallax) */}
+      <Storytelling />
+
+      {/* 4. Le garanzie per il cliente (Statico) */}
+      <TrustBanner />
     </div>
   );
 }

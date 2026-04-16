@@ -4,6 +4,10 @@ import {useAnalytics, useOptimisticCart} from '@shopify/hydrogen';
 import {useAside} from '~/components/Aside';
 import {Menu, ShoppingBag, Search, X, User} from 'lucide-react';
 import {motion, AnimatePresence} from 'framer-motion';
+// Tappabuchi per evitare che Aside.jsx vada in crash
+export function HeaderMenu() {
+  return null;
+}
 
 export function Header({header, isLoggedIn, cart, publicStoreDomain}) {
   const {shop, menu} = header;
@@ -113,7 +117,7 @@ export function Header({header, isLoggedIn, cart, publicStoreDomain}) {
                 onClick={() => setIsMenuOpen(false)}
               />
               <MenuLink
-                to="/collections"
+                to="/collections/all"
                 label="Catalogo"
                 onClick={() => setIsMenuOpen(false)}
               />
