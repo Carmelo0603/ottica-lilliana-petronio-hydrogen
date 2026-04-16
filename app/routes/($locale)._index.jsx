@@ -70,28 +70,20 @@ export default function Homepage() {
 
   return (
     <div className="home">
-      {/* 1. Impatto iniziale (Statico) */}
       <Hero />
 
-      {/* 2. La vetrina prodotti (Dinamica con dati Shopify) */}
       <Suspense
-        fallback={
-          <div className="py-24 text-center font-serif italic uppercase tracking-widest opacity-30">
-            Caricamento catalogo...
-          </div>
-        }
+        fallback={<div className="py-24 text-center">Caricamento...</div>}
       >
         <Await resolve={data.recommendedProducts}>
           {(recommendedProducts) => (
-            <CatalogPreview products={recommendedProducts} />
+            /* Passiamo l'oggetto interno .products che contiene la lista nodes */
+            <CatalogPreview products={recommendedProducts.products} />
           )}
         </Await>
       </Suspense>
 
-      {/* 3. Il racconto del brand (Statico/Parallax) */}
       <Storytelling />
-
-      {/* 4. Le garanzie per il cliente (Statico) */}
       <TrustBanner />
     </div>
   );
@@ -182,10 +174,14 @@ const RECOMMENDED_PRODUCTS_QUERY = `#graphql
     id
     title
     handle
-    priceRange {
-      minVariantPrice {
-        amount
-        currencyCode
+    vendor
+    variants(first: 1) { # <--- AGGIUNTO QUESTO
+      nodes {
+        id
+        price {
+          amount
+          currencyCode
+        }
       }
     }
     featuredImage {

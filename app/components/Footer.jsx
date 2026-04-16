@@ -35,7 +35,7 @@ export function Footer({footer: footerPromise, header, publicStoreDomain}) {
                     <NavLink
                       to="/collections/all"
                       prefetch="intent"
-                      className="block text-brand-light/60 hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
+                      className=" text-brand-light hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
                     >
                       Collezioni
                     </NavLink>
@@ -44,7 +44,7 @@ export function Footer({footer: footerPromise, header, publicStoreDomain}) {
                     <NavLink
                       to="/pages/philosophy"
                       prefetch="intent"
-                      className="block text-brand-light/60 hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
+                      className=" text-brand-light hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
                     >
                       Filosofia
                     </NavLink>
@@ -53,7 +53,7 @@ export function Footer({footer: footerPromise, header, publicStoreDomain}) {
                     <NavLink
                       to="/pages/studio"
                       prefetch="intent"
-                      className="block text-brand-light/60 hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
+                      className=" text-brand-light hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
                     >
                       Studio
                     </NavLink>

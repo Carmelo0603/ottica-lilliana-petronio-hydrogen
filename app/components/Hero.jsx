@@ -69,27 +69,6 @@ export const Hero = () => {
           alt="High fashion model wearing eyewear"
           className="absolute inset-0 w-full h-full object-cover object-top md:object-center opacity-95"
         />
-
-        <motion.div
-          initial={{y: 30, opacity: 0}}
-          animate={{y: 0, opacity: 1}}
-          transition={{duration: 1, delay: 0.8}}
-          className="hidden md:flex absolute bottom-0 left-0 bg-brand-light border-t border-r border-brand-gray p-8 items-center gap-6 z-20 w-80 shadow-[10px_-10px_30px_rgba(13,22,38,0.05)]"
-        >
-          <ImageWithFallback
-            src="https://images.unsplash.com/photo-1766998162306-028b1ded919d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcmVtaXVtJTIwZ2xhc3NlcyUyMGNsb3NlJTIwdXB8ZW58MXx8fHwxNzczMzI5MTQ3fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-            alt="Premium texture close-up"
-            className="w-20 h-24 object-cover hover:scale-105 transition-all duration-700 shadow-md"
-          />
-          <div className="flex flex-col gap-2">
-            <span className="text-brand-dark font-sans text-xs tracking-[0.2em] uppercase font-bold">
-              Titanium Shift
-            </span>
-            <span className="text-brand-accent font-serif text-lg italic tracking-wider">
-              €1,500
-            </span>
-          </div>
-        </motion.div>
       </motion.div>
     </section>
   );
