@@ -90,15 +90,21 @@ export function CartMain({layout, cart: originalCart}) {
 function CartEmpty({hidden = false}) {
   const {close} = useAside();
   return (
-    <div hidden={hidden}>
-      <br />
-      <p>
-        Looks like you haven&rsquo;t added anything yet, let&rsquo;s get you
-        started!
+    <div
+      hidden={hidden}
+      className="flex flex-col items-center justify-center py-20 text-center"
+    >
+      <p className="font-sans text-sm uppercase tracking-widest text-brand-dark/60 mb-8">
+        Il tuo carrello è vuoto.
       </p>
-      <br />
-      <Link to="/collections" onClick={close} prefetch="viewport">
-        Continue shopping →
+      {/* CAMBIA IL TO DA /collections A /collections/all */}
+      <Link
+        to="/collections/all"
+        onClick={close}
+        prefetch="viewport"
+        className="border-b border-brand-dark pb-1 font-sans text-xs uppercase tracking-[0.2em] hover:text-brand-accent hover:border-brand-accent transition-colors"
+      >
+        Torna all&apos;Archivio →
       </Link>
     </div>
   );

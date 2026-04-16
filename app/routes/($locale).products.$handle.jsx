@@ -34,7 +34,7 @@ export default function Product() {
   const images = product.images.nodes;
 
   return (
-    <section className="min-h-screen bg-brand-light pt-32 md:pt-48 pb-24">
+    <section className="min-h-screen bg-brand-light pt-14 md:pt-10 pb-24 px-12">
       {/* IL TASTO ORA È DENTRO IL CONTENITORE PRINCIPALE, SUBITO SOPRA L'IMMAGINE */}
       <div className="mt-20 z-50">
         <Link
