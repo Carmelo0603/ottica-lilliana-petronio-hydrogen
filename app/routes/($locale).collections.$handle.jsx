@@ -1,39 +1,35 @@
-import React, {useState} from 'react';
+import React from 'react';
 import {useLoaderData, Link, useSearchParams} from 'react-router';
-import {getPaginationVariables, Analytics} from '@shopify/hydrogen';
-import {ProductItem} from '~/components/ProductItem';
+import {
+  getPaginationVariables,
+  Analytics,
+  Image,
+  Money,
+} from '@shopify/hydrogen';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
-
-export const meta = ({data}) => {
-  return [{title: `Visione Privata | ${data?.collection?.title ?? ''}`}];
-};
+import {motion} from 'framer-motion';
 
 export async function loader({params, request, context}) {
   const {handle} = params;
   const {storefront} = context;
   const searchParams = new URL(request.url).searchParams;
 
-  // 1. Estrazione filtri
   const filters = [];
   for (const [key, value] of searchParams.entries()) {
     if (key.startsWith('filter.')) {
       try {
         filters.push(JSON.parse(value));
-      } catch (e) {
-        // Fallback per filtri semplici
-      }
+      } catch (e) {}
     }
   }
 
   const paginationVariables = getPaginationVariables(request, {
-    pageBy: 16,
+    pageBy: 12,
   });
 
-  // 2. Query con contesto esplicito (Lingua e Paese)
   const {collection, collections} = await storefront.query(COLLECTION_QUERY, {
     variables: {
       handle,
-      // Se l'array è vuoto, passiamo undefined per avere i filtri iniziali
       filters: filters.length > 0 ? filters : undefined,
       ...paginationVariables,
       country: storefront.i18n.country,
@@ -41,86 +37,108 @@ export async function loader({params, request, context}) {
     },
   });
 
-  if (!collection) {
-    throw new Response('Collection not found', {status: 404});
-  }
+  if (!collection) throw new Response('Not Found', {status: 404});
 
   return {collection, collections};
 }
 
-export default function Collection() {
+export default function CollectionArchive() {
   const {collection, collections} = useLoaderData();
 
-  // DEBUG GIALLO IN CONSOLE
-  console.warn('--- INFO FILTRI ---');
-  console.warn('Prodotti trovati:', collection?.products?.nodes?.length);
-  console.warn('Filtri ricevuti:', collection?.products?.filters);
-
   return (
-    <section className="pt-32 pb-16 px-6 md:px-12 bg-brand-light min-h-screen text-brand-dark">
+    <section className="w-full min-h-screen bg-brand-light pb-24">
       <Analytics.CollectionView
         data={{collection: {id: collection.id, handle: collection.handle}}}
       />
 
-      <header className="mb-16">
-        <h1 className="font-serif italic text-5xl md:text-6xl mb-4 lowercase tracking-tighter">
-          {collection.title}
-        </h1>
-        {collection.description && (
-          <p className="font-sans text-[11px] uppercase tracking-[0.2em] opacity-60 max-w-2xl">
-            {collection.description}
-          </p>
-        )}
+      {/* HEADER EDITORIALE */}
+      <header className="pt-32 pb-16 px-6 md:px-12 border-b border-brand-gray/30 bg-brand-light">
+        <div className="max-w-[1400px] mx-auto text-center md:text-left">
+          <motion.div
+            initial={{opacity: 0, y: 20}}
+            animate={{opacity: 1, y: 0}}
+            transition={{duration: 0.8}}
+          >
+            <span className="font-sans text-brand-accent uppercase tracking-[0.4em] text-[10px] font-bold">
+              Visione Privata // Archivio
+            </span>
+            <h1 className="text-5xl md:text-8xl font-serif text-brand-dark uppercase tracking-tighter mt-4 italic lowercase">
+              {collection.title}
+            </h1>
+          </motion.div>
+        </div>
       </header>
 
-      <div className="flex flex-col md:flex-row gap-16">
-        {/* SIDEBAR COLLEZIONI */}
-        <aside className="w-full md:w-64 shrink-0">
-          <h3 className="font-sans text-[10px] uppercase tracking-[0.3em] font-bold mb-10 opacity-30 border-b border-brand-gray/30 pb-4">
-            Collezioni
-          </h3>
-          <ul className="space-y-6">
-            {collections?.nodes?.map((c) => (
-              <li key={c.id}>
-                <Link
-                  to={`/collections/${c.handle}`}
-                  className={`font-sans text-[11px] uppercase tracking-[0.2em] transition-all duration-300 hover:text-brand-accent ${
-                    collection.handle === c.handle
-                      ? 'font-bold underline underline-offset-8'
-                      : 'opacity-40'
-                  }`}
-                >
-                  {c.title}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </aside>
-
-        {/* MAIN: FILTRI E PRODOTTI */}
-        <main className="flex-1">
-          <div className="flex flex-wrap gap-10 mb-12 border-y border-brand-gray/30 py-6">
-            {collection?.products?.filters?.length > 0 ? (
-              collection.products.filters.map((filter) => (
-                <FilterDropdown key={filter.id} filter={filter} />
-              ))
-            ) : (
-              <p className="font-sans text-[9px] uppercase tracking-widest opacity-30 italic">
-                Nessun filtro disponibile per questa collezione.
-              </p>
-            )}
+      <div className="max-w-[1400px] mx-auto px-6 md:px-12 mt-16 flex flex-col md:flex-row gap-20">
+        {/* SIDEBAR FISSA A SINISTRA */}
+        <aside
+          id="archive-sidebar"
+          className="w-full md:w-64 shrink-0 md:sticky md:top-32 self-start space-y-16 pb-20"
+        >
+          {/* NAVIGAZIONE COLLEZIONI */}
+          <div className="space-y-6">
+            <h3 className="font-sans text-[18px] uppercase tracking-[0.3em] font-bold text-brand-accent border-b border-brand-gray/30 pb-3">
+              Collezioni
+            </h3>
+            <ul className="flex flex-col gap-4">
+              {collections?.nodes?.map((c) => (
+                <li key={c.id}>
+                  <Link
+                    to={`/collections/${c.handle}`}
+                    className={`font-sans text-[11px] uppercase tracking-[0.2em] transition-all duration-300 hover:text-brand-accent ${
+                      collection.handle === c.handle
+                        ? 'text-brand-accent font-bold pl-2 border-l-2 border-brand-accent'
+                        : 'text-brand-dark/60'
+                    }`}
+                  >
+                    {c.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
 
+          {/* FILTRI DINAMICI (Sempre aperti) */}
+          {collection?.products?.filters?.map((filter) => {
+            if (filter.type === 'PRICE_RANGE') return null;
+            return (
+              <div key={filter.id} className="space-y-6">
+                <h3 className="font-sans text-[18px] uppercase tracking-[0.3em] font-bold text-brand-accent border-b border-brand-gray/30 pb-3">
+                  {filter.label}
+                </h3>
+                <ul className="flex flex-col gap-4">
+                  {filter.values.map((value) => (
+                    <li key={value.id}>
+                      <FilterLink value={value} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </aside>
+
+        {/* GRIGLIA PRODOTTI */}
+        <main className="flex-1">
           <PaginatedResourceSection
             connection={collection.products}
-            resourcesClassName="grid grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-16"
+            resourcesClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-16"
           >
-            {({node: product, index}) => (
-              <ProductItem
-                key={product.id}
-                product={product}
-                loading={index < 8 ? 'eager' : undefined}
-              />
+            {({node: product, index, NextLink}) => (
+              <>
+                <ProductCard product={product} index={index} />
+                {/* IL BOTTONE LOAD MORE - Centrato e stilizzato */}
+                {NextLink && (
+                  <div className="flex justify-center pt-20 pb-32 border-t border-brand-gray/10 w-full">
+                    <NextLink className="group relative inline-block px-24 py-8 border border-brand-dark overflow-hidden transition-all duration-500">
+                      <span className="relative z-10 font-sans text-[12px] uppercase tracking-[0.8em] font-bold text-brand-dark group-hover:text-brand-light transition-colors duration-500">
+                        Carica Altri Pezzi
+                      </span>
+                      <div className="absolute inset-0 bg-brand-dark translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
+                    </NextLink>
+                  </div>
+                )}
+              </>
             )}
           </PaginatedResourceSection>
         </main>
@@ -129,100 +147,166 @@ export default function Collection() {
   );
 }
 
-function FilterDropdown({filter}) {
-  const [isOpen, setIsOpen] = useState(false);
-  return (
-    <div className="relative" onMouseLeave={() => setIsOpen(false)}>
-      <button
-        onMouseEnter={() => setIsOpen(true)}
-        className="font-sans text-[10px] uppercase tracking-[0.3em] font-bold hover:text-brand-accent flex items-center gap-2"
-      >
-        {filter.label} <span className="text-[8px]">▼</span>
-      </button>
-      {isOpen && (
-        <div className="absolute top-full left-0 pt-2 z-50">
-          <ul className="bg-brand-light border border-brand-gray/30 p-6 space-y-4 min-w-[220px] shadow-sm">
-            {filter.values.map((value) => (
-              <li key={value.id}>
-                <FilterLink
-                  label={value.label}
-                  input={value.input}
-                  count={value.count}
-                />
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function FilterLink({label, input, count}) {
+function FilterLink({value}) {
   const [searchParams] = useSearchParams();
-  const filterValue = JSON.stringify(input);
-  const isSelected = searchParams.getAll('filter.').includes(filterValue);
+
+  // value.input è una stringa JSON, la usiamo come chiave unica nell'URL
+  const filterKey = 'filter.';
+  const rawInput = value.input; // Questa è la stringa tipo '{"variantOption":...}'
+
+  const currentFilters = searchParams.getAll(filterKey);
+  const isSelected = currentFilters.includes(rawInput);
+
   const newParams = new URLSearchParams(searchParams);
 
   if (isSelected) {
-    const currentValues = newParams.getAll('filter.');
-    newParams.delete('filter.');
-    currentValues.forEach((v) => {
-      if (v !== filterValue) newParams.append('filter.', v);
+    // Se è già selezionato, lo togliamo
+    newParams.delete(filterKey);
+    currentFilters.forEach((f) => {
+      if (f !== rawInput) newParams.append(filterKey, f);
     });
   } else {
-    newParams.append('filter.', filterValue);
+    // Altrimenti lo aggiungiamo
+    newParams.append(filterKey, rawInput);
   }
+
+  // Costruiamo l'URL mantenendo il percorso corrente
+  const linkTo = `?${newParams.toString()}`;
 
   return (
     <Link
-      to={`?${newParams.toString()}`}
+      to={linkTo}
       preventScrollReset
-      className={`flex justify-between items-center font-sans text-[10px] uppercase tracking-widest ${
+      className={`group flex justify-between items-center font-sans text-[11px] uppercase tracking-[0.2em] transition-all duration-300 ${
         isSelected
-          ? 'text-brand-accent font-bold'
-          : 'opacity-50 hover:opacity-100'
+          ? 'text-brand-accent font-bold pl-3 border-l-2 border-brand-accent'
+          : 'text-brand-dark/50 hover:text-brand-dark'
       }`}
     >
-      <span>{label}</span>
-      <span className="text-[8px] opacity-30 ml-4">({count})</span>
+      <span>{value.label}</span>
+      <span className="text-[9px] opacity-20 group-hover:opacity-100 italic ml-4">
+        ({value.count})
+      </span>
     </Link>
   );
 }
 
-const PRODUCT_ITEM_FRAGMENT = `#graphql
-  fragment MoneyProductItem on MoneyV2 { amount currencyCode }
-  fragment ProductItem on Product {
-    id
-    handle
-    title
-    featuredImage { id altText url width height }
-    priceRange {
-      minVariantPrice { ...MoneyProductItem }
-      maxVariantPrice { ...MoneyProductItem }
-    }
-  }
-`;
+function ProductCard({product, index}) {
+  return (
+    <motion.div
+      initial={{opacity: 0, y: 30}}
+      whileInView={{opacity: 1, y: 0}}
+      viewport={{once: true}}
+      transition={{duration: 0.6, delay: (index % 3) * 0.1}}
+      className="group flex flex-col gap-6"
+    >
+      <Link
+        to={`/products/${product.handle}`}
+        className="relative aspect-[4/5] bg-brand-gray overflow-hidden block"
+      >
+        {product.featuredImage ? (
+          <Image
+            data={product.featuredImage}
+            aspectRatio="4/5"
+            sizes="(min-width: 45em) 30vw, 90vw"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000 ease-out"
+          />
+        ) : (
+          <div className="w-full h-full bg-brand-gray flex items-center justify-center font-serif italic text-brand-dark/10 text-xs">
+            Visione Privata
+          </div>
+        )}
+        <div className="absolute inset-0 bg-brand-dark/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+      </Link>
+      <div className="flex flex-col gap-2 font-sans uppercase">
+        <div className="flex justify-between items-start gap-4">
+          <Link
+            to={`/products/${product.handle}`}
+            className="text-brand-dark font-medium text-[12px] tracking-[0.2em] hover:text-brand-accent transition-colors truncate"
+          >
+            {product.title}
+          </Link>
+          <span className="text-brand-accent font-bold text-[12px] tracking-widest italic">
+            <Money data={product.priceRange.minVariantPrice} />
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-4 h-[1px] bg-brand-gray" />
+          <span className="text-brand-dark/40 text-[9px] tracking-[0.3em]">
+            {product.vendor} {product.productType || 'Selection'}
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 const COLLECTION_QUERY = `#graphql
-  ${PRODUCT_ITEM_FRAGMENT}
   query Collection(
     $handle: String!, 
     $filters: [ProductFilter!], 
     $country: CountryCode, 
-    $language: LanguageCode,
+    $language: LanguageCode, 
     $first: Int, 
     $last: Int, 
     $startCursor: String, 
     $endCursor: String
   ) @inContext(country: $country, language: $language) {
-    collections(first: 100) { nodes { id title handle } }
+    collections(first: 100) {
+      nodes {
+        id
+        title
+        handle
+      }
+    }
     collection(handle: $handle) {
-      id handle title description
-      products(first: $first, last: $last, before: $startCursor, after: $endCursor, filters: $filters) {
-        nodes { ...ProductItem }
-        filters { id label type values { id label count input } }
-        pageInfo { hasPreviousPage hasNextPage endCursor startCursor }
+      id
+      handle
+      title
+      description
+      products(
+        first: $first,
+        last: $last,
+        before: $startCursor,
+        after: $endCursor,
+        filters: $filters
+      ) {
+        nodes {
+          id
+          handle
+          title
+          vendor
+          productType
+          featuredImage {
+            url
+            altText
+            width
+            height
+          }
+          priceRange {
+            minVariantPrice {
+              amount
+              currencyCode
+            }
+          }
+        }
+        filters {
+          id
+          label
+          type
+          values {
+            id
+            label
+            count
+            input
+          }
+        }
+        pageInfo {
+          hasPreviousPage
+          hasNextPage
+          endCursor
+          startCursor
+        }
       }
     }
   }
