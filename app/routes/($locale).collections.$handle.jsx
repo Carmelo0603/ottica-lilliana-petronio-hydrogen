@@ -1,4 +1,4 @@
-import {redirect, useLoaderData} from 'react-router';
+import {redirect, useLoaderData, json} from 'react-router';
 import {getPaginationVariables, Analytics} from '@shopify/hydrogen';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
@@ -14,14 +14,49 @@ export const meta = ({data}) => {
 /**
  * @param {Route.LoaderArgs} args
  */
-export async function loader(args) {
-  // Start fetching non-critical data without blocking time to first byte
-  const deferredData = loadDeferredData(args);
+export async function loader({params, request, context}) {
+  const {handle} = params;
+  const searchParams = new URL(request.url).searchParams;
 
-  // Await the critical data required to render initial state of the page
-  const criticalData = await loadCriticalData(args);
+  // Estrazione dei filtri dai parametri della query nell'URL
+  // Hydrogen si aspetta i filtri in un formato array di oggetti ProductFilter
+  const filters = [];
+  for (const [key, value] of searchParams.entries()) {
+    if (key.startsWith('filter.')) {
+      try {
+        // Molti link di filtro in Hydrogen vengono generati come oggetti JSON
+        filters.push(JSON.parse(value));
+      } catch (e) {
+        // Gestione dei parametri che non sono in formato JSON
+      }
+    }
+  }
 
-  return {...deferredData, ...criticalData};
+  // Gestione della paginazione per mantenere la compatibilità con la query
+  const paginationVariables = getPaginationVariables(request, {
+    pageBy: 16, // Numero di prodotti per pagina
+  });
+
+  // Esecuzione della query aggiornata
+  const {collection, collections} = await context.storefront.query(
+    COLLECTION_QUERY,
+    {
+      variables: {
+        handle,
+        filters,
+        ...paginationVariables,
+      },
+    },
+  );
+
+  if (!collection) {
+    throw new Response('Collezione non trovata', {status: 404});
+  }
+
+  return json({
+    collection,
+    collections, // Questo permetterà di popolare la sidebar laterale
+  });
 }
 
 /**
@@ -137,11 +172,20 @@ const COLLECTION_QUERY = `#graphql
     $handle: String!
     $country: CountryCode
     $language: LanguageCode
+    $filters: [ProductFilter!] # <--- 1. AGGIUNTO PER IL FILTRAGGIO REALE
     $first: Int
     $last: Int
     $startCursor: String
     $endCursor: String
   ) @inContext(country: $country, language: $language) {
+    # 2. RECUPERIAMO TUTTE LE COLLEZIONI PER LA SIDEBAR SINISTRA
+    collections(first: 100) {
+      nodes {
+        id
+        title
+        handle
+      }
+    }
     collection(handle: $handle) {
       id
       handle
@@ -151,10 +195,23 @@ const COLLECTION_QUERY = `#graphql
         first: $first,
         last: $last,
         before: $startCursor,
-        after: $endCursor
+        after: $endCursor,
+        filters: $filters # <--- 3. PASSIAMO I FILTRI ALL'API DI SHOPIFY
       ) {
         nodes {
           ...ProductItem
+        }
+        # 4. RECUPERIAMO I FILTRI CONFIGURATI NEL BACKOFFICE (Colore, Forma, etc.)
+        filters {
+          id
+          label
+          type
+          values {
+            id
+            label
+            count
+            input # Questo è l'oggetto JSON che useremo per i link dei filtri
+          }
         }
         pageInfo {
           hasPreviousPage
