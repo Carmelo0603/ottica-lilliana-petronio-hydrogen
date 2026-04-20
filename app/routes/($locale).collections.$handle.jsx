@@ -1,229 +1,229 @@
-import {redirect, useLoaderData, json} from 'react-router';
+import React, {useState} from 'react';
+import {useLoaderData, Link, useSearchParams} from 'react-router';
 import {getPaginationVariables, Analytics} from '@shopify/hydrogen';
-import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
-import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {ProductItem} from '~/components/ProductItem';
+import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
 
-/**
- * @type {Route.MetaFunction}
- */
 export const meta = ({data}) => {
-  return [{title: `Hydrogen | ${data?.collection.title ?? ''} Collection`}];
+  return [{title: `Visione Privata | ${data?.collection?.title ?? ''}`}];
 };
 
-/**
- * @param {Route.LoaderArgs} args
- */
 export async function loader({params, request, context}) {
   const {handle} = params;
+  const {storefront} = context;
   const searchParams = new URL(request.url).searchParams;
 
-  // Estrazione dei filtri dai parametri della query nell'URL
-  // Hydrogen si aspetta i filtri in un formato array di oggetti ProductFilter
+  // 1. Estrazione filtri
   const filters = [];
   for (const [key, value] of searchParams.entries()) {
     if (key.startsWith('filter.')) {
       try {
-        // Molti link di filtro in Hydrogen vengono generati come oggetti JSON
         filters.push(JSON.parse(value));
       } catch (e) {
-        // Gestione dei parametri che non sono in formato JSON
+        // Fallback per filtri semplici
       }
     }
   }
 
-  // Gestione della paginazione per mantenere la compatibilità con la query
   const paginationVariables = getPaginationVariables(request, {
-    pageBy: 16, // Numero di prodotti per pagina
+    pageBy: 16,
   });
 
-  // Esecuzione della query aggiornata
-  const {collection, collections} = await context.storefront.query(
-    COLLECTION_QUERY,
-    {
-      variables: {
-        handle,
-        filters,
-        ...paginationVariables,
-      },
+  // 2. Query con contesto esplicito (Lingua e Paese)
+  const {collection, collections} = await storefront.query(COLLECTION_QUERY, {
+    variables: {
+      handle,
+      // Se l'array è vuoto, passiamo undefined per avere i filtri iniziali
+      filters: filters.length > 0 ? filters : undefined,
+      ...paginationVariables,
+      country: storefront.i18n.country,
+      language: storefront.i18n.language,
     },
-  );
-
-  if (!collection) {
-    throw new Response('Collezione non trovata', {status: 404});
-  }
-
-  return json({
-    collection,
-    collections, // Questo permetterà di popolare la sidebar laterale
-  });
-}
-
-/**
- * Load data necessary for rendering content above the fold. This is the critical data
- * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
- * @param {Route.LoaderArgs}
- */
-async function loadCriticalData({context, params, request}) {
-  const {handle} = params;
-  const {storefront} = context;
-  const paginationVariables = getPaginationVariables(request, {
-    pageBy: 8,
   });
 
-  if (!handle) {
-    throw redirect('/collections');
-  }
-
-  const [{collection}] = await Promise.all([
-    storefront.query(COLLECTION_QUERY, {
-      variables: {handle, ...paginationVariables},
-      // Add other queries here, so that they are loaded in parallel
-    }),
-  ]);
-
   if (!collection) {
-    throw new Response(`Collection ${handle} not found`, {
-      status: 404,
-    });
+    throw new Response('Collection not found', {status: 404});
   }
 
-  // The API handle might be localized, so redirect to the localized handle
-  redirectIfHandleIsLocalized(request, {handle, data: collection});
-
-  return {
-    collection,
-  };
-}
-
-/**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- * @param {Route.LoaderArgs}
- */
-function loadDeferredData({context}) {
-  return {};
+  return {collection, collections};
 }
 
 export default function Collection() {
-  /** @type {LoaderReturnData} */
-  const {collection} = useLoaderData();
+  const {collection, collections} = useLoaderData();
+
+  // DEBUG GIALLO IN CONSOLE
+  console.warn('--- INFO FILTRI ---');
+  console.warn('Prodotti trovati:', collection?.products?.nodes?.length);
+  console.warn('Filtri ricevuti:', collection?.products?.filters);
 
   return (
-    <div className="collection">
-      <h1>{collection.title}</h1>
-      <p className="collection-description">{collection.description}</p>
-      <PaginatedResourceSection
-        connection={collection.products}
-        resourcesClassName="products-grid"
-      >
-        {({node: product, index}) => (
-          <ProductItem
-            key={product.id}
-            product={product}
-            loading={index < 8 ? 'eager' : undefined}
-          />
-        )}
-      </PaginatedResourceSection>
+    <section className="pt-32 pb-16 px-6 md:px-12 bg-brand-light min-h-screen text-brand-dark">
       <Analytics.CollectionView
-        data={{
-          collection: {
-            id: collection.id,
-            handle: collection.handle,
-          },
-        }}
+        data={{collection: {id: collection.id, handle: collection.handle}}}
       />
+
+      <header className="mb-16">
+        <h1 className="font-serif italic text-5xl md:text-6xl mb-4 lowercase tracking-tighter">
+          {collection.title}
+        </h1>
+        {collection.description && (
+          <p className="font-sans text-[11px] uppercase tracking-[0.2em] opacity-60 max-w-2xl">
+            {collection.description}
+          </p>
+        )}
+      </header>
+
+      <div className="flex flex-col md:flex-row gap-16">
+        {/* SIDEBAR COLLEZIONI */}
+        <aside className="w-full md:w-64 shrink-0">
+          <h3 className="font-sans text-[10px] uppercase tracking-[0.3em] font-bold mb-10 opacity-30 border-b border-brand-gray/30 pb-4">
+            Collezioni
+          </h3>
+          <ul className="space-y-6">
+            {collections?.nodes?.map((c) => (
+              <li key={c.id}>
+                <Link
+                  to={`/collections/${c.handle}`}
+                  className={`font-sans text-[11px] uppercase tracking-[0.2em] transition-all duration-300 hover:text-brand-accent ${
+                    collection.handle === c.handle
+                      ? 'font-bold underline underline-offset-8'
+                      : 'opacity-40'
+                  }`}
+                >
+                  {c.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </aside>
+
+        {/* MAIN: FILTRI E PRODOTTI */}
+        <main className="flex-1">
+          <div className="flex flex-wrap gap-10 mb-12 border-y border-brand-gray/30 py-6">
+            {collection?.products?.filters?.length > 0 ? (
+              collection.products.filters.map((filter) => (
+                <FilterDropdown key={filter.id} filter={filter} />
+              ))
+            ) : (
+              <p className="font-sans text-[9px] uppercase tracking-widest opacity-30 italic">
+                Nessun filtro disponibile per questa collezione.
+              </p>
+            )}
+          </div>
+
+          <PaginatedResourceSection
+            connection={collection.products}
+            resourcesClassName="grid grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-16"
+          >
+            {({node: product, index}) => (
+              <ProductItem
+                key={product.id}
+                product={product}
+                loading={index < 8 ? 'eager' : undefined}
+              />
+            )}
+          </PaginatedResourceSection>
+        </main>
+      </div>
+    </section>
+  );
+}
+
+function FilterDropdown({filter}) {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className="relative" onMouseLeave={() => setIsOpen(false)}>
+      <button
+        onMouseEnter={() => setIsOpen(true)}
+        className="font-sans text-[10px] uppercase tracking-[0.3em] font-bold hover:text-brand-accent flex items-center gap-2"
+      >
+        {filter.label} <span className="text-[8px]">▼</span>
+      </button>
+      {isOpen && (
+        <div className="absolute top-full left-0 pt-2 z-50">
+          <ul className="bg-brand-light border border-brand-gray/30 p-6 space-y-4 min-w-[220px] shadow-sm">
+            {filter.values.map((value) => (
+              <li key={value.id}>
+                <FilterLink
+                  label={value.label}
+                  input={value.input}
+                  count={value.count}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
 
-const PRODUCT_ITEM_FRAGMENT = `#graphql
-  fragment MoneyProductItem on MoneyV2 {
-    amount
-    currencyCode
+function FilterLink({label, input, count}) {
+  const [searchParams] = useSearchParams();
+  const filterValue = JSON.stringify(input);
+  const isSelected = searchParams.getAll('filter.').includes(filterValue);
+  const newParams = new URLSearchParams(searchParams);
+
+  if (isSelected) {
+    const currentValues = newParams.getAll('filter.');
+    newParams.delete('filter.');
+    currentValues.forEach((v) => {
+      if (v !== filterValue) newParams.append('filter.', v);
+    });
+  } else {
+    newParams.append('filter.', filterValue);
   }
+
+  return (
+    <Link
+      to={`?${newParams.toString()}`}
+      preventScrollReset
+      className={`flex justify-between items-center font-sans text-[10px] uppercase tracking-widest ${
+        isSelected
+          ? 'text-brand-accent font-bold'
+          : 'opacity-50 hover:opacity-100'
+      }`}
+    >
+      <span>{label}</span>
+      <span className="text-[8px] opacity-30 ml-4">({count})</span>
+    </Link>
+  );
+}
+
+const PRODUCT_ITEM_FRAGMENT = `#graphql
+  fragment MoneyProductItem on MoneyV2 { amount currencyCode }
   fragment ProductItem on Product {
     id
     handle
     title
-    featuredImage {
-      id
-      altText
-      url
-      width
-      height
-    }
+    featuredImage { id altText url width height }
     priceRange {
-      minVariantPrice {
-        ...MoneyProductItem
-      }
-      maxVariantPrice {
-        ...MoneyProductItem
-      }
+      minVariantPrice { ...MoneyProductItem }
+      maxVariantPrice { ...MoneyProductItem }
     }
   }
 `;
 
-// NOTE: https://shopify.dev/docs/api/storefront/2022-04/objects/collection
 const COLLECTION_QUERY = `#graphql
   ${PRODUCT_ITEM_FRAGMENT}
   query Collection(
-    $handle: String!
-    $country: CountryCode
-    $language: LanguageCode
-    $filters: [ProductFilter!] # <--- 1. AGGIUNTO PER IL FILTRAGGIO REALE
-    $first: Int
-    $last: Int
-    $startCursor: String
+    $handle: String!, 
+    $filters: [ProductFilter!], 
+    $country: CountryCode, 
+    $language: LanguageCode,
+    $first: Int, 
+    $last: Int, 
+    $startCursor: String, 
     $endCursor: String
   ) @inContext(country: $country, language: $language) {
-    # 2. RECUPERIAMO TUTTE LE COLLEZIONI PER LA SIDEBAR SINISTRA
-    collections(first: 100) {
-      nodes {
-        id
-        title
-        handle
-      }
-    }
+    collections(first: 100) { nodes { id title handle } }
     collection(handle: $handle) {
-      id
-      handle
-      title
-      description
-      products(
-        first: $first,
-        last: $last,
-        before: $startCursor,
-        after: $endCursor,
-        filters: $filters # <--- 3. PASSIAMO I FILTRI ALL'API DI SHOPIFY
-      ) {
-        nodes {
-          ...ProductItem
-        }
-        # 4. RECUPERIAMO I FILTRI CONFIGURATI NEL BACKOFFICE (Colore, Forma, etc.)
-        filters {
-          id
-          label
-          type
-          values {
-            id
-            label
-            count
-            input # Questo è l'oggetto JSON che useremo per i link dei filtri
-          }
-        }
-        pageInfo {
-          hasPreviousPage
-          hasNextPage
-          endCursor
-          startCursor
-        }
+      id handle title description
+      products(first: $first, last: $last, before: $startCursor, after: $endCursor, filters: $filters) {
+        nodes { ...ProductItem }
+        filters { id label type values { id label count input } }
+        pageInfo { hasPreviousPage hasNextPage endCursor startCursor }
       }
     }
   }
 `;
-
-/** @typedef {import('./+types/collections.$handle').Route} Route */
-/** @typedef {import('storefrontapi.generated').ProductItemFragment} ProductItemFragment */
-/** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof loader>} LoaderReturnData */
