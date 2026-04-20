@@ -47,7 +47,12 @@ export function Aside({children, heading, type}) {
       <button className="close-outside" onClick={close} />
       <aside>
         <header>
-          <h3 id={id}>{heading}</h3>
+          <h3
+            id={id}
+            className="font-sans text-brand-dark uppercase tracking-widest text-sm font-bold flex items-center gap-3"
+          >
+            {heading}
+          </h3>
           <button className="close reset" onClick={close} aria-label="Close">
             &times;
           </button>

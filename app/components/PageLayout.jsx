@@ -49,7 +49,7 @@ export function PageLayout({
  */
 function CartAside({cart}) {
   return (
-    <Aside type="cart" heading="CART">
+    <Aside type="cart" heading="IL TUO CARRELLO">
       <Suspense fallback={<p>Loading cart ...</p>}>
         <Await resolve={cart}>
           {(cart) => {

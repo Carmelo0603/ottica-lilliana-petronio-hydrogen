@@ -3,11 +3,8 @@ import {Link} from 'react-router';
 import {useAside} from '~/components/Aside';
 import {CartLineItem} from '~/components/CartLineItem';
 import {CartSummary} from './CartSummary';
-/**
- * Returns a map of all line items and their children.
- * @param {CartLine[]} lines
- * @return {import("/Users/salva/Desktop/Desktop/Cartelle File/Lavoro/Lavoro OTTICA LILLIANA/Porva lilliana 2/HydrogenProva/ottica-lilliana-petronio-hydrogen/app/components/CartMain").LineItemChildrenMap}
- */
+import {ShoppingBag} from 'lucide-react';
+
 function getLineItemChildrenMap(lines) {
   const children = {};
   for (const line of lines) {
@@ -16,54 +13,26 @@ function getLineItemChildrenMap(lines) {
       if (!children[parentId]) children[parentId] = [];
       children[parentId].push(line);
     }
-    if ('lineComponents' in line) {
-      const children = getLineItemChildrenMap(line.lineComponents);
-      for (const [parentId, childIds] of Object.entries(children)) {
-        if (!children[parentId]) children[parentId] = [];
-        children[parentId].push(...childIds);
-      }
-    }
   }
   return children;
 }
-/**
- * The main cart component that displays the cart items and summary.
- * It is used by both the /cart route and the cart aside dialog.
- * @param {CartMainProps}
- */
-export function CartMain({layout, cart: originalCart}) {
-  // The useOptimisticCart hook applies pending actions to the cart
-  // so the user immediately sees feedback when they modify the cart.
-  const cart = useOptimisticCart(originalCart);
 
+export function CartMain({layout, cart: originalCart}) {
+  // QUESTA è la vera magia di Hydrogen, non il tuo Context fasullo
+  const cart = useOptimisticCart(originalCart);
   const linesCount = Boolean(cart?.lines?.nodes?.length || 0);
-  const withDiscount =
-    cart &&
-    Boolean(cart?.discountCodes?.filter((code) => code.applicable)?.length);
-  const className = `cart-main ${withDiscount ? 'with-discount' : ''}`;
-  const cartHasItems = cart?.totalQuantity ? cart.totalQuantity > 0 : false;
-  const childrenMap = getLineItemChildrenMap(cart?.lines?.nodes ?? []);
+  const cartHasItems = linesCount && cart.totalQuantity > 0;
+  const {close} = useAside();
 
   return (
-    <section
-      className={className}
-      aria-label={layout === 'page' ? 'Cart page' : 'Cart drawer'}
-    >
-      <CartEmpty hidden={linesCount} layout={layout} />
-      <div className="cart-details">
-        <p id="cart-lines" className="sr-only">
-          Line items
-        </p>
-        <div>
-          <ul aria-labelledby="cart-lines">
-            {(cart?.lines?.nodes ?? []).map((line) => {
-              // we do not render non-parent lines at the root of the cart
-              if (
-                'parentRelationship' in line &&
-                line.parentRelationship?.parent
-              ) {
-                return null;
-              }
+    <div className="flex flex-col h-full bg-brand-light">
+      <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-brand-light">
+        {!cartHasItems ? (
+          <CartEmpty close={close} />
+        ) : (
+          <ul className="space-y-16">
+            {cart.lines.nodes.map((line) => {
+              const childrenMap = getLineItemChildrenMap(cart.lines.nodes);
               return (
                 <CartLineItem
                   key={line.id}
@@ -74,50 +43,34 @@ export function CartMain({layout, cart: originalCart}) {
               );
             })}
           </ul>
-        </div>
-        {cartHasItems && <CartSummary cart={cart} layout={layout} />}
+        )}
       </div>
-    </section>
-  );
-}
 
-/**
- * @param {{
- *   hidden: boolean;
- *   layout?: CartMainProps['layout'];
- * }}
- */
-function CartEmpty({hidden = false}) {
-  const {close} = useAside();
-  return (
-    <div
-      hidden={hidden}
-      className="flex flex-col items-center justify-center py-20 text-center"
-    >
-      <p className="font-sans text-sm uppercase tracking-widest text-brand-dark/60 mb-8">
-        Il tuo carrello è vuoto.
-      </p>
-      {/* CAMBIA IL TO DA /collections A /collections/all */}
-      <Link
-        to="/collections/all"
-        onClick={close}
-        prefetch="viewport"
-        className="border-b border-brand-dark pb-1 font-sans text-xs uppercase tracking-[0.2em] hover:text-brand-accent hover:border-brand-accent transition-colors"
-      >
-        Torna all&apos;Archivio →
-      </Link>
+      {cartHasItems && (
+        <div className="p-0 bg-brand-light">
+          {/* CartSummary ha già i suoi bordi e padding nel tuo CSS, lo iniettiamo qui */}
+          <CartSummary cart={cart} layout={layout} />
+        </div>
+      )}
     </div>
   );
 }
 
-/** @typedef {'page' | 'aside'} CartLayout */
-/**
- * @typedef {{
- *   cart: CartApiQueryFragment | null;
- *   layout: CartLayout;
- * }} CartMainProps
- */
-/** @typedef {{[parentId: string]: CartLine[]}} LineItemChildrenMap */
-
-/** @typedef {import('storefrontapi.generated').CartApiQueryFragment} CartApiQueryFragment */
-/** @typedef {import('~/components/CartLineItem').CartLine} CartLine */
+function CartEmpty({close}) {
+  return (
+    <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50 py-20">
+      <ShoppingBag size={48} strokeWidth={1} />
+      <p className="font-sans uppercase tracking-widest text-xs">
+        Il tuo carrello è vuoto.
+      </p>
+      <Link
+        to="/collections/all"
+        onClick={close}
+        prefetch="viewport"
+        className="mt-4 border-b border-brand-dark pb-1 font-sans text-[10px] uppercase tracking-[0.2em] hover:text-brand-accent transition-colors"
+      >
+        Torna all&apos;Archivio
+      </Link>
+    </div>
+  );
+}

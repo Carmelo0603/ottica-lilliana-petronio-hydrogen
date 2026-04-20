@@ -85,14 +85,14 @@ img {
 }
 
 aside {
-  background: var(--color-light);
-  box-shadow: 0 0 50px rgba(0, 0, 0, 0.3);
+  background: #f8f7f4; /* Oppure var(--color-brand-light) se l'hai definita */
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.05); /* Un'ombra più leggera è più elegante */
   height: 100vh;
   width: min(var(--aside-width), 100vw);
   position: fixed;
   right: calc(-1 * var(--aside-width));
   top: 0;
-  transition: transform 200ms ease-in-out;
+  transition: transform 300ms cubic-bezier(0.25, 1, 0.5, 1); /* Animazione più fluida */
 }
 
 aside header {
