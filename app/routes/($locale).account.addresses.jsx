@@ -1,527 +1,284 @@
 import {
-  data,
+  data as remixData,
   Form,
   useActionData,
   useNavigation,
   useOutletContext,
 } from 'react-router';
-import {
-  UPDATE_ADDRESS_MUTATION,
-  DELETE_ADDRESS_MUTATION,
-  CREATE_ADDRESS_MUTATION,
-} from '~/graphql/customer-account/CustomerAddressMutations';
 
-/**
- * @type {Route.MetaFunction}
- */
 export const meta = () => {
-  return [{title: 'Addresses'}];
+  return [{title: 'Indirizzi'}];
 };
 
 /**
- * @param {Route.LoaderArgs}
- */
-export async function loader({context}) {
-  await context.customerAccount.handleAuthStatus();
-
-  return {};
-}
-
-/**
- * @param {Route.ActionArgs}
+ * Action per gestire Creazione, Modifica, Eliminazione e Indirizzo Predefinito
  */
 export async function action({request, context}) {
   const {customerAccount} = context;
+  const formData = await request.formData();
+  const actionType = formData.get('_action');
+  const addressId = formData.get('addressId');
+
+  // Pulizia dei dati del form
+  const address = {
+    firstName: formData.get('firstName') || '',
+    lastName: formData.get('lastName') || '',
+    address1: formData.get('address1') || '',
+    address2: formData.get('address2') || '',
+    city: formData.get('city') || '',
+    zip: formData.get('zip') || '',
+    countryCode: formData.get('countryCode')?.toUpperCase() || 'IT',
+    phone: formData.get('phone') || '',
+  };
 
   try {
-    const form = await request.formData();
+    let result;
 
-    const addressId = form.has('addressId')
-      ? String(form.get('addressId'))
-      : null;
-    if (!addressId) {
-      throw new Error('You must provide an address id.');
-    }
-
-    // this will ensure redirecting to login never happen for mutatation
-    const isLoggedIn = await customerAccount.isLoggedIn();
-    if (!isLoggedIn) {
-      return data(
-        {error: {[addressId]: 'Unauthorized'}},
-        {
-          status: 401,
-        },
-      );
-    }
-
-    const defaultAddress = form.has('defaultAddress')
-      ? String(form.get('defaultAddress')) === 'on'
-      : false;
-    const address = {};
-    const keys = [
-      'address1',
-      'address2',
-      'city',
-      'company',
-      'territoryCode',
-      'firstName',
-      'lastName',
-      'phoneNumber',
-      'zoneCode',
-      'zip',
-    ];
-
-    for (const key of keys) {
-      const value = form.get(key);
-      if (typeof value === 'string') {
-        address[key] = value;
-      }
-    }
-
-    switch (request.method) {
-      case 'POST': {
-        // handle new address creation
-        try {
-          const {data, errors} = await customerAccount.mutate(
-            CREATE_ADDRESS_MUTATION,
-            {
-              variables: {
-                address,
-                defaultAddress,
-                language: customerAccount.i18n.language,
-              },
-            },
-          );
-
-          if (errors?.length) {
-            throw new Error(errors[0].message);
-          }
-
-          if (data?.customerAddressCreate?.userErrors?.length) {
-            throw new Error(data?.customerAddressCreate?.userErrors[0].message);
-          }
-
-          if (!data?.customerAddressCreate?.customerAddress) {
-            throw new Error('Customer address create failed.');
-          }
-
-          return {
-            error: null,
-            createdAddress: data?.customerAddressCreate?.customerAddress,
-            defaultAddress,
-          };
-        } catch (error) {
-          if (error instanceof Error) {
-            return data(
-              {error: {[addressId]: error.message}},
-              {
-                status: 400,
-              },
-            );
-          }
-          return data(
-            {error: {[addressId]: error}},
-            {
-              status: 400,
-            },
-          );
-        }
-      }
-
-      case 'PUT': {
-        // handle address updates
-        try {
-          const {data, errors} = await customerAccount.mutate(
-            UPDATE_ADDRESS_MUTATION,
-            {
-              variables: {
-                address,
-                addressId: decodeURIComponent(addressId),
-                defaultAddress,
-                language: customerAccount.i18n.language,
-              },
-            },
-          );
-
-          if (errors?.length) {
-            throw new Error(errors[0].message);
-          }
-
-          if (data?.customerAddressUpdate?.userErrors?.length) {
-            throw new Error(data?.customerAddressUpdate?.userErrors[0].message);
-          }
-
-          if (!data?.customerAddressUpdate?.customerAddress) {
-            throw new Error('Customer address update failed.');
-          }
-
-          return {
-            error: null,
-            updatedAddress: address,
-            defaultAddress,
-          };
-        } catch (error) {
-          if (error instanceof Error) {
-            return data(
-              {error: {[addressId]: error.message}},
-              {
-                status: 400,
-              },
-            );
-          }
-          return data(
-            {error: {[addressId]: error}},
-            {
-              status: 400,
-            },
-          );
-        }
-      }
-
-      case 'DELETE': {
-        // handles address deletion
-        try {
-          const {data, errors} = await customerAccount.mutate(
-            DELETE_ADDRESS_MUTATION,
-            {
-              variables: {
-                addressId: decodeURIComponent(addressId),
-                language: customerAccount.i18n.language,
-              },
-            },
-          );
-
-          if (errors?.length) {
-            throw new Error(errors[0].message);
-          }
-
-          if (data?.customerAddressDelete?.userErrors?.length) {
-            throw new Error(data?.customerAddressDelete?.userErrors[0].message);
-          }
-
-          if (!data?.customerAddressDelete?.deletedAddressId) {
-            throw new Error('Customer address delete failed.');
-          }
-
-          return {error: null, deletedAddress: addressId};
-        } catch (error) {
-          if (error instanceof Error) {
-            return data(
-              {error: {[addressId]: error.message}},
-              {
-                status: 400,
-              },
-            );
-          }
-          return data(
-            {error: {[addressId]: error}},
-            {
-              status: 400,
-            },
-          );
-        }
-      }
-
-      default: {
-        return data(
-          {error: {[addressId]: 'Method not allowed'}},
+    switch (actionType) {
+      case 'CREATE':
+        result = await customerAccount.mutate(
+          CUSTOMER_ADDRESS_CREATE_MUTATION,
           {
-            status: 405,
+            variables: {address},
           },
         );
-      }
+        break;
+      case 'UPDATE':
+        result = await customerAccount.mutate(
+          CUSTOMER_ADDRESS_UPDATE_MUTATION,
+          {
+            variables: {addressId, address},
+          },
+        );
+        break;
+      case 'DELETE':
+        result = await customerAccount.mutate(
+          CUSTOMER_ADDRESS_DELETE_MUTATION,
+          {
+            variables: {addressId},
+          },
+        );
+        break;
+      case 'DEFAULT':
+        result = await customerAccount.mutate(
+          CUSTOMER_DEFAULT_ADDRESS_UPDATE_MUTATION,
+          {
+            variables: {addressId},
+          },
+        );
+        break;
+      default:
+        throw new Error('Azione non valida');
     }
+
+    if (result.errors?.length) {
+      throw new Error(result.errors[0].message);
+    }
+
+    return remixData({error: null, success: true});
   } catch (error) {
-    if (error instanceof Error) {
-      return data(
-        {error: error.message},
-        {
-          status: 400,
-        },
-      );
-    }
-    return data(
-      {error},
+    return remixData(
       {
-        status: 400,
+        error: error instanceof Error ? error.message : 'Errore sconosciuto',
+        success: false,
       },
+      {status: 400},
     );
   }
 }
 
 export default function Addresses() {
   const {customer} = useOutletContext();
-  const {defaultAddress, addresses} = customer;
+  const actionData = useActionData();
+  const navigation = useNavigation();
+
+  const addresses = customer?.addresses?.nodes || [];
+  const defaultAddressId = customer?.defaultAddress?.id;
 
   return (
-    <div className="account-addresses">
-      <h2>Addresses</h2>
-      <br />
-      <div>
-        <div>
-          <legend>Create address</legend>
-          <NewAddressForm key={addresses.nodes.length} />
+    <div className="max-w-4xl">
+      <header className="mb-12">
+        <h2 className="font-serif text-2xl uppercase tracking-tight mb-2">
+          I tuoi indirizzi
+        </h2>
+        <p className="text-sm text-brand-dark/60">
+          Gestisci le tue sedi di spedizione e fatturazione.
+        </p>
+      </header>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Card Creazione */}
+        <div className="border border-dashed border-brand-dark/20 p-8 flex flex-col bg-white/10">
+          <h3 className="text-[10px] uppercase tracking-widest font-bold mb-6">
+            Nuovo Indirizzo
+          </h3>
+          <AddressForm action="CREATE" buttonText="Aggiungi" />
         </div>
-        <br />
-        <hr />
-        <br />
-        {!addresses.nodes.length ? (
-          <p>You have no addresses saved.</p>
-        ) : (
-          <ExistingAddresses
-            addresses={addresses}
-            defaultAddress={defaultAddress}
-          />
-        )}
+
+        {/* Lista Indirizzi */}
+        {addresses.map((address) => (
+          <div
+            key={address.id}
+            className="border border-brand-dark/10 p-8 relative bg-white/30"
+          >
+            {address.id === defaultAddressId && (
+              <span className="absolute top-4 right-4 text-[9px] uppercase tracking-widest font-bold bg-brand-dark text-brand-light px-2 py-1">
+                Predefinito
+              </span>
+            )}
+
+            <div className="space-y-1 mb-8 text-sm">
+              <p className="font-bold uppercase">
+                {address.firstName} {address.lastName}
+              </p>
+              <p className="text-brand-dark/70">{address.address1}</p>
+              <p className="text-brand-dark/70">
+                {address.zip}, {address.city} ({address.countryCode})
+              </p>
+            </div>
+
+            <div className="space-y-6 pt-6 border-t border-brand-dark/5">
+              <AddressForm
+                action="UPDATE"
+                address={address}
+                buttonText="Aggiorna"
+              />
+
+              <div className="flex gap-4">
+                {address.id !== defaultAddressId && (
+                  <Form method="POST" className="inline">
+                    <input type="hidden" name="_action" value="DEFAULT" />
+                    <input type="hidden" name="addressId" value={address.id} />
+                    <button
+                      type="submit"
+                      className="text-[10px] uppercase tracking-widest font-bold hover:underline"
+                    >
+                      Imposta predefinito
+                    </button>
+                  </Form>
+                )}
+
+                <Form method="POST" className="inline">
+                  <input type="hidden" name="_action" value="DELETE" />
+                  <input type="hidden" name="addressId" value={address.id} />
+                  <button
+                    type="submit"
+                    className="text-[10px] uppercase tracking-widest font-bold text-red-500 hover:underline"
+                  >
+                    Elimina
+                  </button>
+                </Form>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-function NewAddressForm() {
-  const newAddress = {
-    address1: '',
-    address2: '',
-    city: '',
-    company: '',
-    territoryCode: '',
-    firstName: '',
-    id: 'new',
-    lastName: '',
-    phoneNumber: '',
-    zoneCode: '',
-    zip: '',
-  };
+function AddressForm({action, address, buttonText}) {
+  const actionData = useActionData();
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state !== 'idle';
 
   return (
-    <AddressForm
-      addressId={'NEW_ADDRESS_ID'}
-      address={newAddress}
-      defaultAddress={null}
-    >
-      {({stateForMethod}) => (
-        <div>
-          <button
-            disabled={stateForMethod('POST') !== 'idle'}
-            formMethod="POST"
-            type="submit"
-          >
-            {stateForMethod('POST') !== 'idle' ? 'Creating' : 'Create'}
-          </button>
-        </div>
+    <Form method="POST" className="space-y-4">
+      <input type="hidden" name="_action" value={action} />
+      {address?.id && (
+        <input type="hidden" name="addressId" value={address.id} />
       )}
-    </AddressForm>
-  );
-}
 
-/**
- * @param {Pick<CustomerFragment, 'addresses' | 'defaultAddress'>}
- */
-function ExistingAddresses({addresses, defaultAddress}) {
-  return (
-    <div>
-      <legend>Existing addresses</legend>
-      {addresses.nodes.map((address) => (
-        <AddressForm
-          key={address.id}
-          addressId={address.id}
-          address={address}
-          defaultAddress={defaultAddress}
-        >
-          {({stateForMethod}) => (
-            <div>
-              <button
-                disabled={stateForMethod('PUT') !== 'idle'}
-                formMethod="PUT"
-                type="submit"
-              >
-                {stateForMethod('PUT') !== 'idle' ? 'Saving' : 'Save'}
-              </button>
-              <button
-                disabled={stateForMethod('DELETE') !== 'idle'}
-                formMethod="DELETE"
-                type="submit"
-              >
-                {stateForMethod('DELETE') !== 'idle' ? 'Deleting' : 'Delete'}
-              </button>
-            </div>
-          )}
-        </AddressForm>
-      ))}
-    </div>
-  );
-}
-
-/**
- * @param {{
- *   addressId: AddressFragment['id'];
- *   address: CustomerAddressInput;
- *   defaultAddress: CustomerFragment['defaultAddress'];
- *   children: (props: {
- *     stateForMethod: (method: 'PUT' | 'POST' | 'DELETE') => Fetcher['state'];
- *   }) => React.ReactNode;
- * }}
- */
-export function AddressForm({addressId, address, defaultAddress, children}) {
-  const {state, formMethod} = useNavigation();
-  /** @type {ActionReturnData} */
-  const action = useActionData();
-  const error = action?.error?.[addressId];
-  const isDefaultAddress = defaultAddress?.id === addressId;
-  return (
-    <Form id={addressId}>
-      <fieldset>
-        <input type="hidden" name="addressId" defaultValue={addressId} />
-        <label htmlFor="firstName">First name*</label>
-        <input
-          aria-label="First name"
-          autoComplete="given-name"
-          defaultValue={address?.firstName ?? ''}
-          id="firstName"
+      <div className="grid grid-cols-2 gap-4">
+        <AddressInput
           name="firstName"
-          placeholder="First name"
-          required
-          type="text"
+          label="Nome"
+          defaultValue={address?.firstName}
         />
-        <label htmlFor="lastName">Last name*</label>
-        <input
-          aria-label="Last name"
-          autoComplete="family-name"
-          defaultValue={address?.lastName ?? ''}
-          id="lastName"
+        <AddressInput
           name="lastName"
-          placeholder="Last name"
-          required
-          type="text"
+          label="Cognome"
+          defaultValue={address?.lastName}
         />
-        <label htmlFor="company">Company</label>
-        <input
-          aria-label="Company"
-          autoComplete="organization"
-          defaultValue={address?.company ?? ''}
-          id="company"
-          name="company"
-          placeholder="Company"
-          type="text"
-        />
-        <label htmlFor="address1">Address line*</label>
-        <input
-          aria-label="Address line 1"
-          autoComplete="address-line1"
-          defaultValue={address?.address1 ?? ''}
-          id="address1"
-          name="address1"
-          placeholder="Address line 1*"
-          required
-          type="text"
-        />
-        <label htmlFor="address2">Address line 2</label>
-        <input
-          aria-label="Address line 2"
-          autoComplete="address-line2"
-          defaultValue={address?.address2 ?? ''}
-          id="address2"
-          name="address2"
-          placeholder="Address line 2"
-          type="text"
-        />
-        <label htmlFor="city">City*</label>
-        <input
-          aria-label="City"
-          autoComplete="address-level2"
-          defaultValue={address?.city ?? ''}
-          id="city"
-          name="city"
-          placeholder="City"
-          required
-          type="text"
-        />
-        <label htmlFor="zoneCode">State / Province*</label>
-        <input
-          aria-label="State/Province"
-          autoComplete="address-level1"
-          defaultValue={address?.zoneCode ?? ''}
-          id="zoneCode"
-          name="zoneCode"
-          placeholder="State / Province"
-          required
-          type="text"
-        />
-        <label htmlFor="zip">Zip / Postal Code*</label>
-        <input
-          aria-label="Zip"
-          autoComplete="postal-code"
-          defaultValue={address?.zip ?? ''}
-          id="zip"
-          name="zip"
-          placeholder="Zip / Postal Code"
-          required
-          type="text"
-        />
-        <label htmlFor="territoryCode">Country Code*</label>
-        <input
-          aria-label="Country code"
-          autoComplete="country"
-          defaultValue={address?.territoryCode ?? ''}
-          id="territoryCode"
-          name="territoryCode"
-          placeholder="Country"
-          required
-          type="text"
-          maxLength={2}
-        />
-        <label htmlFor="phoneNumber">Phone</label>
-        <input
-          aria-label="Phone Number"
-          autoComplete="tel"
-          defaultValue={address?.phoneNumber ?? ''}
-          id="phoneNumber"
-          name="phoneNumber"
-          placeholder="+16135551111"
-          pattern="^\+?[1-9]\d{3,14}$"
-          type="tel"
-        />
-        <div>
-          <input
-            defaultChecked={isDefaultAddress}
-            id="defaultAddress"
-            name="defaultAddress"
-            type="checkbox"
-          />
-          <label htmlFor="defaultAddress">Set as default address</label>
-        </div>
-        {error ? (
-          <p>
-            <mark>
-              <small>{error}</small>
-            </mark>
-          </p>
-        ) : (
-          <br />
-        )}
-        {children({
-          stateForMethod: (method) => (formMethod === method ? state : 'idle'),
-        })}
-      </fieldset>
+      </div>
+      <AddressInput
+        name="address1"
+        label="Via"
+        defaultValue={address?.address1}
+      />
+      <div className="grid grid-cols-2 gap-4">
+        <AddressInput name="city" label="Città" defaultValue={address?.city} />
+        <AddressInput name="zip" label="CAP" defaultValue={address?.zip} />
+      </div>
+
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="w-full bg-brand-dark text-brand-light py-2 uppercase text-[9px] tracking-widest font-bold hover:bg-brand-accent transition-colors disabled:opacity-50"
+      >
+        {isSubmitting ? 'Salvataggio...' : buttonText}
+      </button>
+
+      {actionData?.error && (
+        <p className="text-[9px] text-red-500 uppercase font-bold">
+          {actionData.error}
+        </p>
+      )}
     </Form>
   );
 }
 
-/**
- * @typedef {{
- *   addressId?: string | null;
- *   createdAddress?: AddressFragment;
- *   defaultAddress?: string | null;
- *   deletedAddress?: string | null;
- *   error: Record<AddressFragment['id'], string> | null;
- *   updatedAddress?: AddressFragment;
- * }} ActionResponse
- */
+function AddressInput({name, label, defaultValue}) {
+  return (
+    <div className="flex flex-col">
+      <label className="text-[8px] uppercase tracking-widest font-bold text-brand-dark/40">
+        {label}
+      </label>
+      <input
+        name={name}
+        type="text"
+        defaultValue={defaultValue || ''}
+        required
+        className="bg-transparent border-b border-brand-dark/10 py-1 text-xs focus:outline-none focus:border-brand-dark transition-colors"
+      />
+    </div>
+  );
+}
 
-/** @typedef {import('@shopify/hydrogen/customer-account-api-types').CustomerAddressInput} CustomerAddressInput */
-/** @typedef {import('customer-accountapi.generated').AddressFragment} AddressFragment */
-/** @typedef {import('customer-accountapi.generated').CustomerFragment} CustomerFragment */
-/** @template T @typedef {import('react-router').Fetcher<T>} Fetcher */
-/** @typedef {import('./+types/account.addresses').Route} Route */
-/** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof loader>} LoaderReturnData */
-/** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof action>} ActionReturnData */
+// --- MUTATIONS GRAPHQL (Definite qui per evitare errori di export) ---
+
+const CUSTOMER_ADDRESS_CREATE_MUTATION = `#graphql
+  mutation customerAddressCreate($address: CustomerAddressInput!) {
+    customerAddressCreate(address: $address) {
+      customerAddress { id }
+      userErrors { field message }
+    }
+  }
+`;
+
+const CUSTOMER_ADDRESS_UPDATE_MUTATION = `#graphql
+  mutation customerAddressUpdate($addressId: ID!, $address: CustomerAddressInput!) {
+    customerAddressUpdate(addressId: $addressId, address: $address) {
+      customerAddress { id }
+      userErrors { field message }
+    }
+  }
+`;
+
+const CUSTOMER_ADDRESS_DELETE_MUTATION = `#graphql
+  mutation customerAddressDelete($addressId: ID!) {
+    customerAddressDelete(addressId: $addressId) {
+      deletedAddressId
+      userErrors { field message }
+    }
+  }
+`;
+
+const CUSTOMER_DEFAULT_ADDRESS_UPDATE_MUTATION = `#graphql
+  mutation customerDefaultAddressUpdate($addressId: ID!) {
+    customerDefaultAddressUpdate(addressId: $addressId) {
+      customer { id }
+      userErrors { field message }
+    }
+  }
+`;

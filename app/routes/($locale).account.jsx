@@ -11,9 +11,6 @@ export function shouldRevalidate() {
   return true;
 }
 
-/**
- * @param {Route.LoaderArgs}
- */
 export async function loader({context}) {
   const {customerAccount} = context;
   const {data, errors} = await customerAccount.query(CUSTOMER_DETAILS_QUERY, {
@@ -23,75 +20,75 @@ export async function loader({context}) {
   });
 
   if (errors?.length || !data?.customer) {
-    throw new Error('Customer not found');
+    throw new Error(
+      'Cliente non trovato. Assicurati che il tunnel sia attivo.',
+    );
   }
 
   return remixData(
     {customer: data.customer},
-    {
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-      },
-    },
+    {headers: {'Cache-Control': 'no-cache, no-store, must-revalidate'}},
   );
 }
 
 export default function AccountLayout() {
-  /** @type {LoaderReturnData} */
   const {customer} = useLoaderData();
 
-  const heading = customer
-    ? customer.firstName
-      ? `Welcome, ${customer.firstName}`
-      : `Welcome to your account.`
-    : 'Account Details';
-
   return (
-    <div className="account">
-      <h1>{heading}</h1>
-      <br />
-      <AccountMenu />
-      <br />
-      <br />
-      <Outlet context={{customer}} />
+    // SFONDO CHIARO - TESTO SCURO
+    <div className="bg-brand-light text-brand-dark min-h-screen pt-24 pb-12 px-6 md:px-12 font-sans">
+      <div className="max-w-[1400px] mx-auto">
+        <header className="mb-12 border-b border-brand-dark/10 pb-8">
+          <h1 className="font-serif text-4xl md:text-6xl uppercase tracking-tight font-medium mb-8">
+            {customer.firstName
+              ? `Ciao, ${customer.firstName}`
+              : 'Il tuo Account'}
+          </h1>
+          <nav className="flex flex-wrap gap-8">
+            <AccountLink to="/account/orders">Ordini</AccountLink>
+            <AccountLink to="/account/profile">Profilo</AccountLink>
+            <AccountLink to="/account/addresses">Indirizzi</AccountLink>
+            <div className="md:ml-auto">
+              <LogoutButton />
+            </div>
+          </nav>
+        </header>
+
+        <main>
+          {/* L'Outlet inietterà i contenuti delle sottopagine qui sotto */}
+          <Outlet context={{customer}} />
+        </main>
+      </div>
     </div>
   );
 }
 
-function AccountMenu() {
-  function isActiveStyle({isActive, isPending}) {
-    return {
-      fontWeight: isActive ? 'bold' : undefined,
-      color: isPending ? 'grey' : 'black',
-    };
-  }
-
+function AccountLink({to, children}) {
   return (
-    <nav role="navigation">
-      <NavLink to="/account/orders" style={isActiveStyle}>
-        Orders &nbsp;
-      </NavLink>
-      &nbsp;|&nbsp;
-      <NavLink to="/account/profile" style={isActiveStyle}>
-        &nbsp; Profile &nbsp;
-      </NavLink>
-      &nbsp;|&nbsp;
-      <NavLink to="/account/addresses" style={isActiveStyle}>
-        &nbsp; Addresses &nbsp;
-      </NavLink>
-      &nbsp;|&nbsp;
-      <Logout />
-    </nav>
+    <NavLink
+      to={to}
+      className={({isActive}) =>
+        `text-xs uppercase tracking-[0.2em] transition-all pb-2 border-b-2 ${
+          isActive
+            ? 'text-brand-dark border-brand-dark font-bold'
+            : 'text-brand-dark/40 border-transparent hover:text-brand-dark'
+        }`
+      }
+    >
+      {children}
+    </NavLink>
   );
 }
 
-function Logout() {
+function LogoutButton() {
   return (
-    <Form className="account-logout" method="POST" action="/account/logout">
-      &nbsp;<button type="submit">Sign out</button>
+    <Form method="POST" action="/account/logout">
+      <button
+        type="submit"
+        className="text-xs uppercase tracking-[0.2em] text-brand-accent font-bold hover:underline"
+      >
+        Esci
+      </button>
     </Form>
   );
 }
-
-/** @typedef {import('./+types/account').Route} Route */
-/** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof loader>} LoaderReturnData */

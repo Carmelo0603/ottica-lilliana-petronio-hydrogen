@@ -1,35 +1,23 @@
-import {
-  Link,
-  useLoaderData,
-  useNavigation,
-  useSearchParams,
-} from 'react-router';
-import {useRef} from 'react';
+import {Link, useLoaderData} from 'react-router';
 import {
   Money,
-  getPaginationVariables,
   flattenConnection,
+  getPaginationVariables,
 } from '@shopify/hydrogen';
-import {
-  buildOrderSearchQuery,
-  parseOrderFilters,
-  ORDER_FILTER_FIELDS,
-} from '~/lib/orderFilters';
 import {CUSTOMER_ORDERS_QUERY} from '~/graphql/customer-account/CustomerOrdersQuery';
-import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
+import {buildOrderSearchQuery, parseOrderFilters} from '~/lib/orderFilters';
 
-/**
- * @type {Route.MetaFunction}
- */
 export const meta = () => {
-  return [{title: 'Orders'}];
+  return [{title: 'Ordini'}];
 };
 
-/**
- * @param {Route.LoaderArgs}
- */
+// --------------------------------------------------------
+// IL BACK-END: Ripristinato con tutti i parametri di ricerca
+// --------------------------------------------------------
 export async function loader({request, context}) {
   const {customerAccount} = context;
+
+  // Paginazione e filtri richiesti dalla query
   const paginationVariables = getPaginationVariables(request, {
     pageBy: 20,
   });
@@ -42,197 +30,84 @@ export async function loader({request, context}) {
     variables: {
       ...paginationVariables,
       query,
+      // Importante: Passiamo la lingua per non avere traduzioni sballate
       language: customerAccount.i18n.language,
     },
   });
 
   if (errors?.length || !data?.customer) {
-    throw Error('Customer orders not found');
+    throw new Error('Ordini non trovati');
   }
 
   return {customer: data.customer, filters};
 }
 
-export default function Orders() {
-  /** @type {LoaderReturnData} */
-  const {customer, filters} = useLoaderData();
-  const {orders} = customer;
+// --------------------------------------------------------
+// IL FRONT-END: La UI di design pulita su sfondo chiaro
+// --------------------------------------------------------
+export default function OrdersIndex() {
+  const {customer} = useLoaderData();
+  const orders = flattenConnection(customer.orders);
 
-  return (
-    <div className="orders">
-      <OrderSearchForm currentFilters={filters} />
-      <OrdersTable orders={orders} filters={filters} />
-    </div>
-  );
-}
-
-/**
- * @param {{
- *   orders: CustomerOrdersFragment['orders'];
- *   filters: OrderFilterParams;
- * }}
- */
-function OrdersTable({orders, filters}) {
-  const hasFilters = !!(filters.name || filters.confirmationNumber);
-
-  return (
-    <div className="acccount-orders" aria-live="polite">
-      {orders?.nodes.length ? (
-        <PaginatedResourceSection connection={orders}>
-          {({node: order}) => <OrderItem key={order.id} order={order} />}
-        </PaginatedResourceSection>
-      ) : (
-        <EmptyOrders hasFilters={hasFilters} />
-      )}
-    </div>
-  );
-}
-
-/**
- * @param {{hasFilters?: boolean}}
- */
-function EmptyOrders({hasFilters = false}) {
-  return (
-    <div>
-      {hasFilters ? (
-        <>
-          <p>No orders found matching your search.</p>
-          <br />
-          <p>
-            <Link to="/account/orders">Clear filters →</Link>
-          </p>
-        </>
-      ) : (
-        <>
-          <p>You haven&apos;t placed any orders yet.</p>
-          <br />
-          <p>
-            <Link to="/collections">Start Shopping →</Link>
-          </p>
-        </>
-      )}
-    </div>
-  );
-}
-
-/**
- * @param {{
- *   currentFilters: OrderFilterParams;
- * }}
- */
-function OrderSearchForm({currentFilters}) {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const navigation = useNavigation();
-  const isSearching =
-    navigation.state !== 'idle' &&
-    navigation.location?.pathname?.includes('orders');
-  const formRef = useRef(null);
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const params = new URLSearchParams();
-
-    const name = formData.get(ORDER_FILTER_FIELDS.NAME)?.toString().trim();
-    const confirmationNumber = formData
-      .get(ORDER_FILTER_FIELDS.CONFIRMATION_NUMBER)
-      ?.toString()
-      .trim();
-
-    if (name) params.set(ORDER_FILTER_FIELDS.NAME, name);
-    if (confirmationNumber)
-      params.set(ORDER_FILTER_FIELDS.CONFIRMATION_NUMBER, confirmationNumber);
-
-    setSearchParams(params);
-  };
-
-  const hasFilters = currentFilters.name || currentFilters.confirmationNumber;
-
-  return (
-    <form
-      ref={formRef}
-      onSubmit={handleSubmit}
-      className="order-search-form"
-      aria-label="Search orders"
-    >
-      <fieldset className="order-search-fieldset">
-        <legend className="order-search-legend">Filter Orders</legend>
-
-        <div className="order-search-inputs">
-          <input
-            type="search"
-            name={ORDER_FILTER_FIELDS.NAME}
-            placeholder="Order #"
-            aria-label="Order number"
-            defaultValue={currentFilters.name || ''}
-            className="order-search-input"
-          />
-          <input
-            type="search"
-            name={ORDER_FILTER_FIELDS.CONFIRMATION_NUMBER}
-            placeholder="Confirmation #"
-            aria-label="Confirmation number"
-            defaultValue={currentFilters.confirmationNumber || ''}
-            className="order-search-input"
-          />
-        </div>
-
-        <div className="order-search-buttons">
-          <button type="submit" disabled={isSearching}>
-            {isSearching ? 'Searching' : 'Search'}
-          </button>
-          {hasFilters && (
-            <button
-              type="button"
-              disabled={isSearching}
-              onClick={() => {
-                setSearchParams(new URLSearchParams());
-                formRef.current?.reset();
-              }}
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      </fieldset>
-    </form>
-  );
-}
-
-/**
- * @param {{order: OrderItemFragment}}
- */
-function OrderItem({order}) {
-  const fulfillmentStatus = flattenConnection(order.fulfillments)[0]?.status;
-  return (
-    <>
-      <fieldset>
-        <Link to={`/account/orders/${btoa(order.id)}`}>
-          <strong>#{order.number}</strong>
+  if (!orders.length) {
+    return (
+      <div className="py-12 border-t border-brand-dark/10">
+        <p className="text-brand-dark/60 uppercase text-sm tracking-widest">
+          Non hai ancora effettuato ordini.
+        </p>
+        <Link
+          to="/collections/all"
+          className="inline-block mt-6 px-8 py-4 bg-brand-dark text-brand-light uppercase text-xs tracking-widest font-bold hover:bg-brand-accent transition-colors"
+        >
+          Inizia lo shopping
         </Link>
-        <p>{new Date(order.processedAt).toDateString()}</p>
-        {order.confirmationNumber && (
-          <p>Confirmation: {order.confirmationNumber}</p>
-        )}
-        <p>{order.financialStatus}</p>
-        {fulfillmentStatus && <p>{fulfillmentStatus}</p>}
-        <Money data={order.totalPrice} />
-        <Link to={`/account/orders/${btoa(order.id)}`}>View Order →</Link>
-      </fieldset>
-      <br />
-    </>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-12">
+      <div className="grid grid-cols-1 gap-6">
+        {orders.map((order) => (
+          <div
+            key={order.id}
+            className="border border-brand-dark/10 p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:border-brand-dark/30 transition-colors bg-white/50"
+          >
+            <div className="space-y-2">
+              <span className="text-[10px] text-brand-dark/40 uppercase tracking-widest font-bold">
+                Ordine {order.number}
+              </span>
+              <h3 className="text-xl font-serif">
+                {new Date(order.processedAt).toLocaleDateString('it-IT')}
+              </h3>
+            </div>
+            <div className="flex gap-12">
+              <div className="text-center">
+                <p className="text-[10px] text-brand-dark/40 uppercase tracking-widest mb-1">
+                  Stato
+                </p>
+                <p className="text-xs uppercase font-bold">
+                  {order.financialStatus}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-brand-dark/40 uppercase tracking-widest mb-1">
+                  Totale
+                </p>
+                <p className="text-xs font-bold">
+                  <Money data={order.totalPrice} />
+                </p>
+              </div>
+            </div>
+            <Link
+              to={`/account/orders/${btoa(order.id)}`}
+              className="px-6 py-3 border border-brand-dark text-brand-dark uppercase text-[10px] tracking-widest font-bold hover:bg-brand-dark hover:text-brand-light transition-all"
+            >
+              Dettagli
+            </Link>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
-
-/**
- * @typedef {{
- *   customer: CustomerOrdersFragment;
- *   filters: OrderFilterParams;
- * }} OrdersLoaderData
- */
-
-/** @typedef {import('./+types/account.orders._index').Route} Route */
-/** @typedef {import('~/lib/orderFilters').OrderFilterParams} OrderFilterParams */
-/** @typedef {import('customer-accountapi.generated').CustomerOrdersFragment} CustomerOrdersFragment */
-/** @typedef {import('customer-accountapi.generated').OrderItemFragment} OrderItemFragment */
-/** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof loader>} LoaderReturnData */

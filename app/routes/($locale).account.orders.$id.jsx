@@ -176,11 +176,16 @@ export default function OrderRoute() {
         </div>
       </div>
       <br />
-      <p>
-        <a target="_blank" href={order.statusPageUrl} rel="noreferrer">
-          View Order Status →
+      <div className="mt-8 pt-8 border-t border-brand-dark/10">
+        <a
+          target="_blank"
+          href={order.statusPageUrl}
+          rel="noreferrer"
+          className="inline-block bg-brand-accent text-brand-light px-8 py-4 uppercase text-xs tracking-widest font-bold hover:bg-brand-dark transition-colors"
+        >
+          Traccia la spedizione
         </a>
-      </p>
+      </div>
     </div>
   );
 }
