@@ -40,7 +40,6 @@ export const CART_QUERY_FRAGMENT = `#graphql
           altText
           width
           height
-
         }
         product {
           handle
@@ -225,9 +224,15 @@ export const HEADER_QUERY = `#graphql
       ...Menu
     }
   }
-  ${MENU_FRAGMENT}
+${MENU_FRAGMENT}
 `;
 
+/*
+ * FOOTER_QUERY
+ * Oltre al menu dinamico del footer, recupera le policy del negozio
+ * direttamente dall'API Shopify. Sono gestite dal cliente nell'admin
+ * in Impostazioni → Policy e si aggiornano automaticamente.
+ */
 export const FOOTER_QUERY = `#graphql
   query Footer(
     $country: CountryCode
@@ -237,6 +242,12 @@ export const FOOTER_QUERY = `#graphql
     menu(handle: $footerMenuHandle) {
       ...Menu
     }
+    shop {
+      privacyPolicy   { title handle }
+      refundPolicy    { title handle }
+      shippingPolicy  { title handle }
+      termsOfService  { title handle }
+    }
   }
-  ${MENU_FRAGMENT}
+${MENU_FRAGMENT}
 `;

@@ -650,3 +650,54 @@ button.reset:hover:not(:has(> *)) {
   gap: 0.75rem;
   flex-wrap: wrap;
 }
+
+/*
+* --------------------------------------------------
+* routes/policies.$handle.jsx
+* Stili per il corpo HTML delle policy generate da Shopify
+* --------------------------------------------------
+*/
+.policy-body {
+  font-family: var(--font-sans, sans-serif);
+  color: #1a1a1a;
+  line-height: 1.8;
+}
+
+.policy-body h1,
+.policy-body h2,
+.policy-body h3,
+.policy-body h4 {
+  font-family: var(--font-serif, serif);
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.policy-body h2 {
+  font-size: 1.5rem;
+}
+.policy-body h3 {
+  font-size: 1.1rem;
+}
+
+.policy-body p {
+  margin-bottom: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.policy-body a {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.policy-body ul,
+.policy-body ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.policy-body li {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}

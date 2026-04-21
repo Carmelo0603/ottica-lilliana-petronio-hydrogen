@@ -25,7 +25,7 @@ export function Footer({footer: footerPromise, header, publicStoreDomain}) {
                 </p>
               </div>
 
-              {/* Colonna 2: Navigazione Statica (Colore bianco/60 FORZATO) */}
+              {/* Colonna 2: Navigazione Statica */}
               <div className="space-y-8">
                 <h4 className="text-brand-light font-sans text-xs tracking-[0.3em] uppercase font-bold">
                   Esplora
@@ -35,7 +35,7 @@ export function Footer({footer: footerPromise, header, publicStoreDomain}) {
                     <NavLink
                       to="/collections/all"
                       prefetch="intent"
-                      className=" text-brand-light hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
+                      className="text-brand-light hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
                     >
                       Collezioni
                     </NavLink>
@@ -44,7 +44,7 @@ export function Footer({footer: footerPromise, header, publicStoreDomain}) {
                     <NavLink
                       to="/pages/philosophy"
                       prefetch="intent"
-                      className=" text-brand-light hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
+                      className="text-brand-light hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
                     >
                       Filosofia
                     </NavLink>
@@ -53,7 +53,7 @@ export function Footer({footer: footerPromise, header, publicStoreDomain}) {
                     <NavLink
                       to="/pages/studio"
                       prefetch="intent"
-                      className=" text-brand-light hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
+                      className="text-brand-light hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
                     >
                       Studio
                     </NavLink>
@@ -61,18 +61,14 @@ export function Footer({footer: footerPromise, header, publicStoreDomain}) {
                 </ul>
               </div>
 
-              {/* Colonna 3: Navigazione Dinamica Shopify */}
+              {/* Colonna 4: Policy legali — dinamiche da Shopify
+                  Il cliente le gestisce in Admin → Impostazioni → Policy.
+                  Vengono mostrate solo le policy che il cliente ha compilato. */}
               <div className="space-y-8">
                 <h4 className="text-brand-light font-sans text-xs tracking-[0.3em] uppercase font-bold">
-                  Supporto
+                  Legale
                 </h4>
-                {footer?.menu && header?.shop?.primaryDomain?.url && (
-                  <FooterMenu
-                    menu={footer.menu}
-                    primaryDomainUrl={header.shop.primaryDomain.url}
-                    publicStoreDomain={publicStoreDomain}
-                  />
-                )}
+                <PolicyLinks shop={footer?.shop} />
               </div>
             </div>
 
@@ -101,68 +97,50 @@ export function Footer({footer: footerPromise, header, publicStoreDomain}) {
 }
 
 // ==========================================
-// Componente Figlio: Il Menu Dinamico
+// Policy dinamiche da Shopify
+// Mostra solo le policy che il cliente ha effettivamente compilato
+// nell'admin (Impostazioni → Policy).
 // ==========================================
-function FooterMenu({menu, primaryDomainUrl, publicStoreDomain}) {
+function PolicyLinks({shop}) {
+  if (!shop) return null;
+
+  // Lista delle policy nell'ordine desiderato
+  const policies = [
+    shop.privacyPolicy,
+    shop.shippingPolicy,
+    shop.refundPolicy,
+    shop.termsOfService,
+  ].filter(Boolean); // rimuove quelle non compilate
+
+  if (policies.length === 0) return null;
+
   return (
     <ul className="space-y-4">
-      {(menu || FALLBACK_FOOTER_MENU).items.map((item) => {
-        if (!item.url) return null;
-
-        const url =
-          item.url.includes('myshopify.com') ||
-          item.url.includes(publicStoreDomain) ||
-          item.url.includes(primaryDomainUrl)
-            ? new URL(item.url).pathname
-            : item.url;
-
-        const isExternal = !url.startsWith('/');
-
-        return (
-          <li key={item.id}>
-            {isExternal ? (
-              <a
-                href={url}
-                rel="noopener noreferrer"
-                target="_blank"
-                className="block text-brand-light/60 hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
-              >
-                {item.title}
-              </a>
-            ) : (
-              <NavLink
-                end
-                prefetch="intent"
-                to={url}
-                className={({isActive}) =>
-                  isActive
-                    ? 'block text-brand-accent font-bold text-sm uppercase tracking-widest'
-                    : 'block text-brand-light/60 hover:text-brand-accent transition-colors text-sm uppercase tracking-widest'
-                }
-              >
-                {item.title}
-              </NavLink>
-            )}
-          </li>
-        );
-      })}
+      {policies.map((policy) => (
+        <li key={policy.handle}>
+          <NavLink
+            to={`/policies/${policy.handle}`}
+            prefetch="intent"
+            className={({isActive}) =>
+              isActive
+                ? 'block text-brand-accent font-bold text-sm uppercase tracking-widest'
+                : 'block text-brand-light/60 hover:text-brand-accent transition-colors text-sm uppercase tracking-widest'
+            }
+          >
+            {policy.title}
+          </NavLink>
+        </li>
+      ))}
     </ul>
   );
 }
 
-// Fallback di sicurezza
-const FALLBACK_FOOTER_MENU = {
-  id: 'gid://shopify/Menu/199655620664',
-  items: [
-    {id: '1', title: 'Privacy Policy', url: '/policies/privacy-policy'},
-    {id: '2', title: 'Refund Policy', url: '/policies/refund-policy'},
-    {id: '3', title: 'Shipping Policy', url: '/policies/shipping-policy'},
-    {id: '4', title: 'Terms of Service', url: '/policies/terms-of-service'},
-  ],
-};
+// ==========================================
+// Menu dinamico dal menu "footer" di Shopify
+// ==========================================
 
 // ==========================================
-// Icone Native (Bypass per errore Lucide)
+// Icone
 // ==========================================
 const InstagramIcon = ({className, size}) => (
   <svg

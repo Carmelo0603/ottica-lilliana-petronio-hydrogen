@@ -1,103 +1,76 @@
-import {Link, useLoaderData} from 'react-router';
+import {useLoaderData} from 'react-router';
 
 /**
- * @type {Route.MetaFunction}
- */
-export const meta = ({data}) => {
-  return [{title: `Hydrogen | ${data?.policy.title ?? ''}`}];
-};
-
-/**
+ * Route: /policies/:handle
+ *
+ * Renderizza una singola policy di Shopify (privacy, rimborsi, spedizione,
+ * termini di servizio). Il contenuto è gestito dal cliente nell'admin Shopify
+ * in Impostazioni → Policy — nessun intervento di sviluppo necessario.
+ *
  * @param {Route.LoaderArgs}
  */
 export async function loader({params, context}) {
-  if (!params.handle) {
-    throw new Response('No handle was passed in', {status: 404});
-  }
+  const {handle} = params;
+  const {storefront} = context;
 
-  const policyName = params.handle.replace(/-([a-z])/g, (_, m1) =>
-    m1.toUpperCase(),
-  );
+  const data = await storefront.query(POLICY_QUERY);
+  const {shop} = data;
 
-  const data = await context.storefront.query(POLICY_CONTENT_QUERY, {
-    variables: {
-      privacyPolicy: false,
-      shippingPolicy: false,
-      termsOfService: false,
-      refundPolicy: false,
-      [policyName]: true,
-      language: context.storefront.i18n?.language,
-    },
-  });
+  // Mappa handle → oggetto policy
+  const policyMap = {
+    'privacy-policy': shop.privacyPolicy,
+    'refund-policy': shop.refundPolicy,
+    'shipping-policy': shop.shippingPolicy,
+    'terms-of-service': shop.termsOfService,
+  };
 
-  const policy = data.shop?.[policyName];
+  const policy = policyMap[handle];
 
   if (!policy) {
-    throw new Response('Could not find the policy', {status: 404});
+    throw new Response('Policy non trovata', {status: 404});
   }
 
   return {policy};
 }
 
-export default function Policy() {
-  /** @type {LoaderReturnData} */
+export default function PolicyPage() {
   const {policy} = useLoaderData();
 
   return (
-    <div className="policy">
-      <br />
-      <br />
-      <div>
-        <Link to="/policies">← Back to Policies</Link>
-      </div>
-      <br />
-      <h1>{policy.title}</h1>
-      <div dangerouslySetInnerHTML={{__html: policy.body}} />
-    </div>
+    <main className="w-full min-h-screen bg-brand-light pb-24">
+      {/* Header */}
+      <header className="pt-32 pb-16 px-6 md:px-12 border-b border-brand-gray/30">
+        <div className="max-w-[860px] mx-auto">
+          <span className="font-sans text-brand-accent uppercase tracking-[0.4em] text-[10px] font-bold">
+            Informazioni Legali
+          </span>
+          <h1 className="text-4xl md:text-6xl font-serif text-brand-dark uppercase tracking-tighter mt-4 italic lowercase">
+            {policy.title}
+          </h1>
+        </div>
+      </header>
+
+      {/* Corpo della policy — HTML generato da Shopify */}
+      <article className="max-w-[860px] mx-auto px-6 md:px-12 mt-16 policy-body">
+        <div dangerouslySetInnerHTML={{__html: policy.body}} />
+      </article>
+    </main>
   );
 }
 
-// NOTE: https://shopify.dev/docs/api/storefront/latest/objects/Shop
-const POLICY_CONTENT_QUERY = `#graphql
-  fragment Policy on ShopPolicy {
-    body
-    handle
-    id
-    title
-    url
-  }
-  query Policy(
-    $country: CountryCode
-    $language: LanguageCode
-    $privacyPolicy: Boolean!
-    $refundPolicy: Boolean!
-    $shippingPolicy: Boolean!
-    $termsOfService: Boolean!
-  ) @inContext(language: $language, country: $country) {
+/*
+ * Recupera tutte le policy in un'unica query.
+ * L'handle nell'URL decide quale viene mostrata.
+ */
+const POLICY_QUERY = `#graphql
+  query ShopPolicies {
     shop {
-      privacyPolicy @include(if: $privacyPolicy) {
-        ...Policy
-      }
-      shippingPolicy @include(if: $shippingPolicy) {
-        ...Policy
-      }
-      termsOfService @include(if: $termsOfService) {
-        ...Policy
-      }
-      refundPolicy @include(if: $refundPolicy) {
-        ...Policy
-      }
+      privacyPolicy   { title handle body }
+      refundPolicy    { title handle body }
+      shippingPolicy  { title handle body }
+      termsOfService  { title handle body }
     }
   }
 `;
 
-/**
- * @typedef {keyof Pick<
- *   Shop,
- *   'privacyPolicy' | 'shippingPolicy' | 'termsOfService' | 'refundPolicy'
- * >} SelectedPolicies
- */
-
 /** @typedef {import('./+types/policies.$handle').Route} Route */
-/** @typedef {import('@shopify/hydrogen/storefront-api-types').Shop} Shop */
-/** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof loader>} LoaderReturnData */
