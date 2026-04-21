@@ -9,6 +9,9 @@
 /* 2. Inizializza Tailwind v4 */
 @import 'tailwindcss';
 
+/* ---> AGGIUNGI QUESTA RIGA QUI <--- */
+@plugin '@tailwindcss/typography';
+
 /* 3. Le tue variabili di design */
 @theme {
   --font-serif: 'Cormorant Garamond', serif;

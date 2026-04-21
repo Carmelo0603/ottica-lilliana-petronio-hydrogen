@@ -9,7 +9,7 @@ export function Footer({footer: footerPromise, header, publicStoreDomain}) {
       <Await resolve={footerPromise}>
         {(footer) => (
           <footer className="w-full bg-brand-dark border-t border-brand-light/10 pt-24 pb-12 px-6 md:px-12 relative z-10 text-brand-light">
-            <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-24 mb-24">
+            <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-5 gap-12 md:gap-24 mb-24">
               {/* Colonna 1: Brand */}
               <div className="md:col-span-2 space-y-8">
                 <NavLink
@@ -58,6 +58,35 @@ export function Footer({footer: footerPromise, header, publicStoreDomain}) {
                       Studio
                     </NavLink>
                   </li>
+                </ul>
+              </div>
+
+              {/* Colonna 3: Supporto */}
+              <div className="space-y-8">
+                <h4 className="text-brand-light font-sans text-xs tracking-[0.3em] uppercase font-bold">
+                  Supporto
+                </h4>
+                <ul className="space-y-4">
+                  <li>
+                    {/* ATTENZIONE: Cambia "domande-frequenti" con l'handle reale della pagina su Shopify */}
+                    <NavLink
+                      to="/pages/domande-frequenti"
+                      prefetch="intent"
+                      className="text-brand-light hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
+                    >
+                      Domande Frequenti
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink
+                      to="/pages/contacts"
+                      prefetch="intent"
+                      className="text-brand-light hover:text-brand-accent transition-colors text-sm uppercase tracking-widest"
+                    >
+                      Contatti
+                    </NavLink>
+                  </li>
+                  {/* Se in futuro il cliente vuole aggiungere "Contattaci" o simili, lo metti qui */}
                 </ul>
               </div>
 

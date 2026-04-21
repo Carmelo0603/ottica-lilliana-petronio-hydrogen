@@ -66,11 +66,23 @@ export default function Page() {
   const {page} = useLoaderData();
 
   return (
-    <div className="page">
-      <header>
-        <h1>{page.title}</h1>
+    <div className="page px-6 md:px-12 py-24 bg-brand-dark min-h-screen">
+      {/* Container principale con padding per farlo respirare */}
+
+      <header className="max-w-3xl mx-auto mb-12">
+        <h1 className="font-serif text-4xl md:text-5xl text-brand-light uppercase tracking-tight font-medium">
+          {page.title}
+        </h1>
       </header>
-      <main dangerouslySetInnerHTML={{__html: page.body}} />
+
+      {/* La magia di Tailwind Typography in azione sul body di Shopify */}
+      <main
+        className="prose prose-invert max-w-3xl mx-auto font-sans text-brand-light/80 
+                   prose-headings:font-serif prose-headings:text-brand-light prose-headings:uppercase prose-headings:tracking-tight prose-headings:font-medium
+                   prose-a:text-brand-accent hover:prose-a:text-brand-light prose-a:transition-colors
+                   prose-strong:text-brand-light prose-strong:font-bold prose-ul:tracking-widest"
+        dangerouslySetInnerHTML={{__html: page.body}}
+      />
     </div>
   );
 }
