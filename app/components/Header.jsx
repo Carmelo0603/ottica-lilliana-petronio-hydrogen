@@ -4,6 +4,7 @@ import {useAnalytics, useOptimisticCart} from '@shopify/hydrogen';
 import {useAside} from '~/components/Aside';
 import {Menu, ShoppingBag, Search, X, User} from 'lucide-react';
 import {motion, AnimatePresence} from 'framer-motion';
+import {CountrySelector} from './CountrySelector';
 // Tappabuchi per evitare che Aside.jsx vada in crash
 export function HeaderMenu() {
   return null;
@@ -64,6 +65,8 @@ export function Header({header, isLoggedIn, cart, publicStoreDomain}) {
             >
               <Search strokeWidth={1.5} size={20} />
             </button>
+
+            <CountrySelector strokeWidth={1.5} size={20}></CountrySelector>
 
             {/* Aggiunto il login utente. Un e-commerce senza account non si può vedere. */}
             <NavLink

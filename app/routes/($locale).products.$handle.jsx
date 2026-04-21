@@ -13,7 +13,12 @@ export async function loader({params, context}) {
   const {storefront} = context;
 
   const {product} = await storefront.query(PRODUCT_QUERY, {
-    variables: {handle},
+    variables: {
+      handle,
+      // Passiamo il contesto internazionale a Shopify!
+      country: storefront.i18n.country,
+      language: storefront.i18n.language,
+    },
   });
 
   if (!product) {
@@ -197,7 +202,11 @@ function AddToCartButton({variantId, available}) {
 
 // QUERY GRAPHQL
 const PRODUCT_QUERY = `#graphql
-  query Product($handle: String!) {
+  query Product(
+    $handle: String!
+    $country: CountryCode
+    $language: LanguageCode
+  ) @inContext(country: $country, language: $language) {
     product(handle: $handle) {
       id
       title

@@ -21,17 +21,17 @@ import {PageLayout} from './components/PageLayout';
  * @type {ShouldRevalidateFunction}
  */
 export const shouldRevalidate = ({formMethod, currentUrl, nextUrl}) => {
-  // revalidate when a mutation is performed e.g add to cart, login...
+  // Revalida sempre se c'è una mutazione (aggiunta al carrello, ecc.)
   if (formMethod && formMethod !== 'GET') return true;
 
-  // revalidate when manually revalidating via useRevalidator
-  if (currentUrl.toString() === nextUrl.toString()) return true;
+  // Revalida se il prefisso della lingua/paese nell'URL è cambiato
+  // (es. da /it-it/ a /en-us/)
+  const currentLocale = currentUrl.pathname.split('/')[1];
+  const nextLocale = nextUrl.pathname.split('/')[1];
 
-  // Defaulting to no revalidation for root loader data to improve performance.
-  // When using this feature, you risk your UI getting out of sync with your server.
-  // Use with caution. If you are uncomfortable with this optimization, update the
-  // line below to `return defaultShouldRevalidate` instead.
-  // For more details see: https://remix.run/docs/en/main/route/should-revalidate
+  if (currentLocale !== nextLocale) return true;
+
+  // Per tutte le altre navigazioni interne, non ricaricare (performance)
   return false;
 };
 
@@ -75,6 +75,7 @@ export async function loader(args) {
     ...deferredData,
     ...criticalData,
     publicStoreDomain: env.PUBLIC_STORE_DOMAIN,
+    locale: storefront.i18n,
     shop: getShopAnalytics({
       storefront,
       publicStorefrontId: env.PUBLIC_STOREFRONT_ID,
@@ -98,17 +99,25 @@ export async function loader(args) {
 async function loadCriticalData({context}) {
   const {storefront} = context;
 
-  const [header] = await Promise.all([
+  // Destrutturiamo sia l'header che la nostra nuova localization
+  const [header, {localization}] = await Promise.all([
     storefront.query(HEADER_QUERY, {
       cache: storefront.CacheLong(),
       variables: {
         headerMenuHandle: 'main-menu', // Adjust to your header menu handle
+        //PASSAGGI FONDAMENTALI
+        language: storefront.i18n.language,
+        country: storefront.i18n.country,
       },
     }),
-    // Add other queries here, so that they are loaded in parallel
+    // La nostra query per le nazioni, cachata a lungo termine perché non cambia spesso
+    storefront.query(LOCALIZATION_QUERY, {
+      cache: storefront.CacheLong(),
+    }),
   ]);
 
-  return {header};
+  // Esportiamo anche localization
+  return {header, localization};
 }
 
 /**
@@ -211,6 +220,20 @@ export function ErrorBoundary() {
     </div>
   );
 }
+
+const LOCALIZATION_QUERY = `#graphql
+  query Localization {
+    localization {
+      availableCountries {
+        isoCode
+        name
+        currency {
+          isoCode
+        }
+      }
+    }
+  }
+`;
 
 /** @typedef {LoaderReturnData} RootLoader */
 
