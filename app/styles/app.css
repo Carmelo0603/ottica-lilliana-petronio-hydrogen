@@ -83,40 +83,12 @@ img {
     overflow: hidden;
   }
 }
-
-/* Applica lo stile SOLO alla sidebar dell'archivio */
-.collection-sidebar {
-  position: relative; /* Default per mobile */
-  background-color: transparent !important;
-  border: none !important;
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE / Edge legacy */
 }
-
-@media (min-width: 768px) {
-  .collection-sidebar {
-    position: sticky !important;
-    top: 8rem; /* Corrisponde a top-32 di tailwind */
-    left: auto !important;
-    height: auto !important;
-    display: block !important;
-    visibility: visible !important;
-  }
-}
-#archive-sidebar {
-  background-color: transparent !important; /* Elimina il bianco perla */
-  box-shadow: none !important; /* Rimuove eventuali ombreggiature */
-  border: none !important; /* Rimuove bordi indesiderati */
-  position: relative; /* Mobile default */
-  left: auto !important; /* Resetta il bug dei 904px */
-  overflow-y: scroll;
-}
-
-@media (min-width: 768px) {
-  #archive-sidebar {
-    position: sticky !important; /* Torna a essere sticky su desktop */
-    top: 8rem; /* Distanza dall'alto */
-    height: fit-content !important; /* Non farlo diventare alto quanto il sito */
-    display: block !important;
-  }
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome / Safari / Opera */
 }
 
 aside {
