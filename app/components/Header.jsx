@@ -71,6 +71,13 @@ export function Header({header, isLoggedIn, cart, publicStoreDomain}) {
             >
               <Search strokeWidth={1.5} size={20} />
             </button>
+            <NavLink
+              prefetch="intent"
+              to="/account"
+              className="text-brand-dark hover:text-brand-accent transition-colors duration-300 hidden md:block"
+            >
+              <User strokeWidth={1.5} size={20} />
+            </NavLink>
 
             {/* Valuta: Visibile solo da Desktop */}
             <CountrySelector className="hidden lg:block w-[60px]" />
@@ -111,6 +118,7 @@ export function Header({header, isLoggedIn, cart, publicStoreDomain}) {
 
             <div className="flex-1 flex flex-col items-center justify-center space-y-6 md:space-y-10">
               {/* Le rotte sono state adattate per Shopify. Niente finti "Archive" */}
+
               <MenuLink
                 to="/"
                 label="Home"
@@ -136,12 +144,23 @@ export function Header({header, isLoggedIn, cart, publicStoreDomain}) {
                 label="Contatti"
                 onClick={() => setIsMenuOpen(false)}
               />
-              <div className="px-6 py-10 border-t border-brand-light/10 flex flex-col items-center gap-4">
-                <p className="text-[10px] uppercase tracking-widest text-brand-light/50">
-                  Cambia Valuta
-                </p>
-                {/* Qui lo rendiamo bianco perché il menu mobile è scuro */}
-                <CountrySelector className="w-full max-w-[150px] border-brand-light/20 text-brand-light" />
+              <div className="px-6 py-8 border-t border-brand-light/10 flex flex-row items-center gap-10">
+                <div className="">
+                  <p className="text-[10px] uppercase tracking-widest text-brand-light/50">
+                    Cambia Valuta
+                  </p>
+                  {/* Qui lo rendiamo bianco perché il menu mobile è scuro */}
+                  <CountrySelector className="w-full max-w-[150px] border-brand-light/20 text-brand-light" />
+                </div>
+                <div className="flex-1">
+                  <NavLink
+                    to="/account"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="block w-full bg-transparent border-b border-brand-light/10 py-1 font-sans text-[10px] md:text-xs uppercase tracking-[0.2em] text-brand-light text-center hover:text-brand-accent hover:border-brand-accent transition-all duration-300"
+                  >
+                    {isLoggedIn ? 'Area Profilo' : 'Accedi'}
+                  </NavLink>
+                </div>
               </div>
             </div>
 
