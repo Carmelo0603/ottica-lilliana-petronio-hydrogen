@@ -171,7 +171,7 @@ function SearchResultsPredictiveProducts({term, products, closeSearch}) {
 
   return (
     <div className="predictive-search-result" key="products">
-      <h5>Products</h5>
+      <h5 className="text-s mb-1">Prodotti</h5>
       <ul>
         {products.map((product) => {
           const productUrl = urlWithTrackingParams({
@@ -237,7 +237,7 @@ function SearchResultsPredictiveEmpty({term}) {
 
   return (
     <p>
-      No results found for <q>{term.current}</q>
+      Non ci sono risultati per <q>{term.current}</q>
     </p>
   );
 }

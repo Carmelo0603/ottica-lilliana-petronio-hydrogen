@@ -41,43 +41,40 @@ export function Header({header, isLoggedIn, cart, publicStoreDomain}) {
         transition={{duration: 0.8, ease: [0.16, 1, 0.3, 1]}}
         className="fixed top-0 left-0 w-full z-40 bg-brand-light/95 backdrop-blur-md border-b border-brand-gray"
       >
-        <div className="flex items-center justify-between px-6 py-5 md:px-12 md:py-6">
-          <button
-            onClick={() => setIsMenuOpen(true)}
-            className="text-brand-dark hover:text-brand-accent transition-colors duration-300"
-          >
-            <Menu strokeWidth={1.5} size={28} />
-          </button>
+        <div className="flex items-center px-6 py-5 md:px-12 md:py-6 relative">
+          {/* COLONNA SX: Solo il Burger */}
+          <div className="flex-1">
+            <button
+              onClick={() => setIsMenuOpen(true)}
+              className="text-brand-dark"
+            >
+              <Menu strokeWidth={1.5} size={28} />
+            </button>
+          </div>
 
-          <NavLink
-            prefetch="intent"
-            to="/"
-            className="text-brand-dark font-serif text-sm sm:text-base md:text-xl lg:text-2xl tracking-widest uppercase font-medium absolute left-1/2 -translate-x-1/2 whitespace-nowrap"
-          >
-            {/* Dinamico, niente nomi hardcoded, grazie. */}
-            {shop.name}
-          </NavLink>
+          {/* LOGO CENTRALE: Protetto dal flex e da un max-width */}
+          <div className="flex-[2] flex justify-center overflow-hidden">
+            <NavLink
+              to="/"
+              className="text-brand-dark font-serif text-base sm:text-lg md:text-2xl tracking-widest uppercase font-medium whitespace-nowrap truncate"
+            >
+              {shop.name}
+            </NavLink>
+          </div>
 
-          <div className="flex items-center gap-4 md:gap-6">
+          {/* COLONNA DX: Cerca (sempre), Valuta (solo desktop), Cart */}
+          <div className="flex-1 flex items-center justify-end gap-4 md:gap-6">
+            {/* Cerca: Rimosso 'hidden md:block' -> SEMPRE VISIBILE */}
             <button
               onClick={() => open('search')}
-              className="text-brand-dark hover:text-brand-accent transition-colors duration-300 hidden md:block"
+              className="text-brand-dark hover:text-brand-accent transition-colors"
             >
               <Search strokeWidth={1.5} size={20} />
             </button>
 
-            <CountrySelector strokeWidth={1.5} size={20}></CountrySelector>
+            {/* Valuta: Visibile solo da Desktop */}
+            <CountrySelector className="hidden lg:block w-[60px]" />
 
-            {/* Aggiunto il login utente. Un e-commerce senza account non si può vedere. */}
-            <NavLink
-              prefetch="intent"
-              to="/account"
-              className="text-brand-dark hover:text-brand-accent transition-colors duration-300 hidden md:block"
-            >
-              <User strokeWidth={1.5} size={20} />
-            </NavLink>
-
-            {/* Qui avviene la magia del carrello Shopify */}
             <CartToggle cart={cart} openAside={open} />
           </div>
         </div>
@@ -139,6 +136,13 @@ export function Header({header, isLoggedIn, cart, publicStoreDomain}) {
                 label="Contatti"
                 onClick={() => setIsMenuOpen(false)}
               />
+              <div className="px-6 py-10 border-t border-brand-light/10 flex flex-col items-center gap-4">
+                <p className="text-[10px] uppercase tracking-widest text-brand-light/50">
+                  Cambia Valuta
+                </p>
+                {/* Qui lo rendiamo bianco perché il menu mobile è scuro */}
+                <CountrySelector className="w-full max-w-[150px] border-brand-light/20 text-brand-light" />
+              </div>
             </div>
 
             <div className="px-6 py-8 md:px-12 text-center text-brand-light/50 font-sans uppercase text-[10px] tracking-[0.3em]">

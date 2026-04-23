@@ -1,8 +1,8 @@
 import {useLocation, useRouteLoaderData} from 'react-router';
 
-export function CountrySelector() {
+// Aggiungiamo la prop className per gestirlo meglio nell'header
+export function CountrySelector({className = '', showFullLabel = true}) {
   const location = useLocation();
-  // Peschiamo i dati direttamente dalla root! Niente props.
   const rootData = useRouteLoaderData('root');
 
   if (!rootData?.localization?.availableCountries || !rootData?.locale)
@@ -11,39 +11,21 @@ export function CountrySelector() {
   const {availableCountries} = rootData.localization;
   const currentLocale = rootData.locale;
 
-  // Se c'è un solo paese, inutile mostrare la tendina
-  if (availableCountries.length < 2) return null;
-
   const handleCountryChange = (event) => {
     const selectedCountryIso = event.target.value;
-
-    // Il nuovo prefisso (es: en-us)
     const newLocalePrefix = `${currentLocale.language.toLowerCase()}-${selectedCountryIso.toLowerCase()}`;
-
-    // Dividiamo il percorso attuale in pezzi
-    // Esempio: "/en-it/collections/all" -> ["", "en-it", "collections", "all"]
     const pathParts = location.pathname.split('/');
-
-    // Se il secondo elemento (indice 1) è un locale (formato xx-xx), lo rimuoviamo.
-    // Usiamo una Regex per essere sicuri di non cancellare pezzi di URL reali
     if (/^[a-zA-Z]{2}-[a-zA-Z]{2}$/.test(pathParts[1])) {
       pathParts.splice(1, 1);
     }
-
-    // Ricostruiamo il path pulito (es: /collections/all)
     const cleanPath = pathParts.join('/');
-
-    // Generiamo l'URL finale
-    const newUrl = `/${newLocalePrefix}${cleanPath}${location.search}`;
-
-    // Refresh forzato per sincronizzare i dati del server
-    window.location.href = newUrl;
+    window.location.href = `/${newLocalePrefix}${cleanPath}${location.search}`;
   };
 
   return (
-    <div className="space-y-4">
+    <div className={className}>
       <select
-        className="w-full border border-brand-dark/40 text-brand-dark font-sans text-sm uppercase py-1 px-2 focus:outline-none focus:border-brand-accent transition-colors cursor-pointer"
+        className="w-full bg-transparent border-b border-current py-1 font-sans text-[10px] md:text-xs uppercase tracking-widest cursor-pointer focus:outline-none"
         defaultValue={currentLocale.country}
         onChange={handleCountryChange}
       >
@@ -51,9 +33,12 @@ export function CountrySelector() {
           <option
             key={country.isoCode}
             value={country.isoCode}
-            className="bg-brand-dark text-brand-light"
+            className="text-brand-dark bg-brand-light"
           >
-            {country.name} ({country.currency.isoCode})
+            {/* Se showFullLabel è true mostriamo il nome, altrimenti solo la valuta */}
+            {showFullLabel
+              ? `${country.name} (${country.currency.isoCode})`
+              : country.currency.isoCode}
           </option>
         ))}
       </select>
