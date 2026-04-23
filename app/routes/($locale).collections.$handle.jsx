@@ -8,6 +8,7 @@ import {
 } from '@shopify/hydrogen';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
 import {motion, AnimatePresence} from 'framer-motion';
+import {FloatingFilter} from '~/components/FloatingFilter';
 
 export async function loader({params, request, context}) {
   const {handle} = params;
@@ -237,6 +238,11 @@ export default function CollectionArchive() {
           </PaginatedResourceSection>
         </main>
       </div>
+      {/* BOTTONE FLUTTUANTE 
+        Viene montato solo se NON siamo su desktop.
+        Gli passiamo la stessa funzione che apre la sidebar mobile.
+      */}
+      {!isDesktop && <FloatingFilter onClick={() => setIsFilterOpen(true)} />}
     </section>
   );
 }
